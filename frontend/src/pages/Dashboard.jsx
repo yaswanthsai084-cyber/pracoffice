@@ -117,7 +117,7 @@ function Dashboard() {
   return (
     <div className="dashboard-page flex min-h-screen flex-col bg-page">
 
-      <Header />
+      <Header showLogout />
 
       <main className="flex-1">
 
