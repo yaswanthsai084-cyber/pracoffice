@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom"
+import { clearToken } from "../../services/authService"
 
 function Header({ showLogout = false }) {
 
@@ -6,7 +7,7 @@ function Header({ showLogout = false }) {
 
   // Drop the session token and return to the login page.
   const handleLogout = () => {
-    localStorage.removeItem("token")
+    clearToken()
     navigate("/login")
   }
 
