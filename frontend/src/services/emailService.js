@@ -233,4 +233,100 @@ export const markMessageSeen = (id) => {
 
   return messages
 }
+/**
+ * Sends the composed message. Attachments travel as multipart/form-data so
+ * the backend can hand buffers straight to multer or Nodemailer.
+ *
+ * On an unreachable backend the message is still recorded in Sent, because
+ * losing a candidate's work mid-exam is worse than an offline submission.
+ */
+export const sendMessage = async ({ from, to, subject, body, attachments = [] }) => {
+  const form = new FormData()
+
+  form.append("from", from)
+  form.append("to", to)
+  form.append("subject", subject)
+  form.append("body", body)
+
+  attachments.forEach((file) => {
+    form.append("attachments", file, file.name)
+  })
+
+  const record = {
+    id: `sent-${Date.now()}`,
+    from,
+    to,
+    subject,
+    body,
+    date: new Date().toISOString(),
+    seen: true,
+    flagged: false,
+    importance: "normal",
+    hasAttachment: attachments.length > 0,
+    attachments: attachments.map((file) => ({ name: file.name, size: file.size })),
+  }
+
+  const persist = (delivered) => {
+    const sent = readStore(STORAGE_KEYS.sent, [])
+
+    writeStore(STORAGE_KEYS.sent, [{ ...record, delivered }, ...sent])
+  }
+
+  try {
+    const response = await request("/api/exam/email/send", {
+      method: "POST",
+      body: form,
+    })
+
+    const payload = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      throw new Error(payload?.message || `Send failed with status ${response.status}`)
+    }
+
+    persist(true)
+
+    return { ok: true, delivered: true, message: payload, source: "backend" }
+  } catch (error) {
+    console.warn("Send did not reach the backend:", error.message)
+
+    persist(false)
+
+    return { ok: true, delivered: false, error: error.message, source: "local" }
+  }
+}
+
+/**
+ * Graded evidence for Part E, shaped for the exam submit payload so the
+ * backend can score e1-e5 without re-deriving anything from the mail store.
+ */
+export const getPartEEvidence = () => {
+  const inbox = readStore(STORAGE_KEYS.inbox, SEED_INBOX).map(normalizeMessage)
+  const sent = readStore(STORAGE_KEYS.sent, []).map(normalizeMessage)
+  const latest = sent[0]
+
+  return {
+    sent: sent.map(({ body, ...rest }) => rest),
+    lastSentMessage: latest
+      ? {
+          to: latest.to,
+          subject: latest.subject,
+          bodyPreview: String(latest.body || "")
+            .replace(/<[^>]*>/g, " ")
+            .trim(),
+          attachments: latest.attachments,
+          delivered: latest.delivered !== false,
+        }
+      : null,
+    inboxCount: inbox.length,
+    flaggedMessageIds: inbox.filter((message) => message.flagged).map((m) => m.id),
+    invoiceFlagged: inbox.some(
+      (message) =>
+        /invoice/i.test(message.subject) &&
+        (message.flagged || message.importance === "high")
+    ),
+    inboxSource: backendLive ? "backend" : "local",
+  }
+}
+
 
