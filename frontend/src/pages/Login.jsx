@@ -168,7 +168,7 @@ function Login() {
                     <input
                       id="password"
                       name="password"
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? "tel" : "password"}
                       inputMode="numeric"
                       autoComplete="current-password"
                       maxLength="10"
