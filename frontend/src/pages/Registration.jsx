@@ -1,12 +1,17 @@
+import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import Header from "../components/common/Header"
 import Footer from "../components/common/Footer"
+import { registerAccount, describeError } from "../services/authService"
 import "./registration.css"
 
 function Registration() {
   const navigate = useNavigate()
 
-  const handleSubmit = (event) => {
+  const [error, setError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     const form = event.target
@@ -21,9 +26,18 @@ function Registration() {
       return
     }
 
-    console.log("Registration form submitted")
+    setError("")
+    setSubmitting(true)
 
-    navigate("/login")
+    try {
+      // POST /api/auth/register - the mobile number becomes the password.
+      await registerAccount({ username, mobileNumber, email, dateOfBirth })
+      navigate("/login")
+    } catch (requestError) {
+      setError(describeError(requestError))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -210,12 +224,23 @@ function Registration() {
                   />
                 </div>
 
+                {/* Error message */}
+                {error && (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+                  >
+                    {error}
+                  </div>
+                )}
+
                 {/* Register Button */}
                 <button
                   type="submit"
-                  className="registration-btn w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:from-indigo-700 hover:to-violet-700 focus:outline-none focus:ring-4 focus:ring-indigo-200"
+                  disabled={submitting}
+                  className="registration-btn w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:from-indigo-700 hover:to-violet-700 focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
-                  Create Account
+                  {submitting ? "Creating account..." : "Create Account"}
                 </button>
 
               </form>

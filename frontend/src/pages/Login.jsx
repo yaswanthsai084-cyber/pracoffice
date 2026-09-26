@@ -1,17 +1,26 @@
+import { useState } from "react"
 import { Link, useNavigate} from "react-router-dom"
 import { useState } from "react"
 import Header from "../components/common/Header"
 import Footer from "../components/common/Footer"
+import { loginUser, saveToken, describeError } from "../services/authService"
 import "./login.css"
 
 function Login() {
 
   const navigate = useNavigate()
 
+<<<<<<< HEAD
   // Toggles between masked (dots) and visible password/mobile number.
   const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = (event) => {
+=======
+  const [error, setError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (event) => {
+>>>>>>> 5c14fce (CHANGES THE BACKEND TO DATABASE CONNECTION)
     event.preventDefault()
 
     const username = event.target.username.value.trim()
@@ -22,9 +31,19 @@ function Login() {
       return
     }
 
-    console.log("Login form submitted")
+    setError("")
+    setSubmitting(true)
 
-    navigate("/dashboard")
+    try {
+      // POST /api/auth/login - the password is the registered mobile number.
+      const session = await loginUser({ username, password })
+      saveToken(session.token)
+      navigate("/dashboard")
+    } catch (requestError) {
+      setError(describeError(requestError))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -226,12 +245,23 @@ function Login() {
                   </p>
                 </div>
 
+                {/* Error message */}
+                {error && (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+                  >
+                    {error}
+                  </div>
+                )}
+
                 {/* Login button */}
                 <button
                   type="submit"
-                  className="login-btn w-full rounded-xl bg-brand px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition hover:-translate-y-0.5 hover:bg-brand-dark focus:outline-none focus:ring-4 focus:ring-brand/20"
+                  disabled={submitting}
+                  className="login-btn w-full rounded-xl bg-brand px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition hover:-translate-y-0.5 hover:bg-brand-dark focus:outline-none focus:ring-4 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
-                  Sign in
+                  {submitting ? "Signing in..." : "Sign in"}
                 </button>
 
               </form>

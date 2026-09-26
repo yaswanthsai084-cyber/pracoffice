@@ -20,7 +20,8 @@ module.exports = (sequelize, DataTypes) => {
       name: {
         type: DataTypes.STRING(120),
         allowNull: false,
-        validate: { notEmpty: { msg: 'Name is required' } },
+        // No name input exists on the registration form; the auth service
+        // derives the name from the username, so it is never client-required.
       },
       email: {
         type: DataTypes.STRING(160),
