@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Link, useNavigate} from "react-router-dom"
-import { useState } from "react"
 import Header from "../components/common/Header"
 import Footer from "../components/common/Footer"
 import { loginUser, saveToken, describeError } from "../services/authService"
@@ -10,10 +9,13 @@ function Login() {
 
   const navigate = useNavigate()
 
+  const [error, setError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+
   // Toggles between masked (dots) and visible password/mobile number.
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     const username = event.target.username.value.trim()
