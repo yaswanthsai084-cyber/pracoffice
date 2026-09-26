@@ -1,14 +1,16 @@
-function Footer() {
+import "./footer.css"
+
+function Footer({ fullWidth = false }) {
   return (
-    <footer className="border-t border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-6 text-sm text-slate-500 sm:flex-row lg:px-8">
+    <footer className="site-footer border-t">
+      <div className={`${fullWidth ? "w-full" : "mx-auto max-w-7xl"} footer-text flex flex-col items-center justify-between gap-3 px-6 py-6 text-sm sm:flex-row lg:px-8`}>
 
         <p>
-          © 2026 PracOffice. All rights reserved.
+          © 2026 Proficiency in Office Automation. All rights reserved.
         </p>
 
         <p>
-          Practical skills assessment platform
+          Online exam for qualifying the proficiency test
         </p>
 
       </div>

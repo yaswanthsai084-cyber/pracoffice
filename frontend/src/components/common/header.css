@@ -1,0 +1,52 @@
+/*
+ * ============================================================
+ *  HEADER STYLES  (src/components/common/Header.jsx)
+ *  Edit the values below to restyle the shared header only.
+ * ============================================================
+ */
+
+.site-header {
+  /* Palette used by the header */
+  --header-brand: #4F46E5;
+  --header-brand-dark: #4338CA;
+  --header-brand-vivid: #7C3AED;
+  --header-text: #0F172A;
+  --header-muted: #64748B;
+  --header-ring: #E0E7FF;
+  --header-btn-shadow: #C7D2FE;
+
+  border-color: #E2E8F0;
+  background-color: rgb(255 255 255 / 0.9);
+}
+
+/* Logo badge with the indigo-to-violet brand gradient */
+.site-header .header-logo-badge {
+  background-image: linear-gradient(135deg, var(--header-brand), var(--header-brand-vivid));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Site title next to the logo */
+.site-header .header-title {
+  color: var(--header-text);
+}
+
+/* Subtitle under the title and the right-side tagline */
+.site-header .header-subtitle,
+.site-header .header-tagline {
+  color: var(--header-muted);
+}
+
+/* Logout button shown on signed-in pages */
+.site-header .header-logout-btn {
+  background-color: var(--header-brand);
+  color: #ffffff;
+  box-shadow: 0 4px 6px -1px var(--header-btn-shadow);
+}
+
+.site-header .header-logout-btn:hover {
+  background-color: var(--header-brand-dark);
+}
+
+.site-header .header-logout-btn:focus {
+  box-shadow: 0 0 0 4px var(--header-ring);
+}

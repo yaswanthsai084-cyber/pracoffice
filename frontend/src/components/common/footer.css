@@ -1,0 +1,20 @@
+/*
+ * ============================================================
+ *  FOOTER STYLES  (src/components/common/Footer.jsx)
+ *  Edit the values below to restyle the shared footer only.
+ * ============================================================
+ */
+
+.site-footer {
+  /* Palette used by the footer */
+  --footer-text: #64748B;
+  --footer-border: #E2E8F0;
+
+  border-color: var(--footer-border);
+  background-color: #FFFFFF;
+}
+
+/* Copyright and tagline text */
+.site-footer .footer-text {
+  color: var(--footer-text);
+}

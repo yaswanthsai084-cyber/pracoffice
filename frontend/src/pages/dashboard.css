@@ -10,8 +10,6 @@
   --dashboard-brand: #6366F1;
   --dashboard-brand-dark: #4F46E5;
   --dashboard-page-bg: #F8FAFC;
-  --dashboard-surface: #FFFFFF;
-  --dashboard-border: #E2E8F0;
 
   background-color: var(--dashboard-page-bg);
 }
@@ -36,8 +34,3 @@
   background-color: #EEF2FF;
 }
 
-/* Practice exam part cards (Word, Excel, ...) */
-.dashboard-page .dashboard-card {
-  background-color: var(--dashboard-surface);
-  border-color: var(--dashboard-border);
-}

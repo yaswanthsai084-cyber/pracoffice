@@ -1,7 +1,7 @@
 import Header from "../common/Header"
 import Footer from "../common/Footer"
 import { Link } from "react-router-dom"
-import "./result.css"
+import "./results.css"
 
 function Results() {
   const results = [
