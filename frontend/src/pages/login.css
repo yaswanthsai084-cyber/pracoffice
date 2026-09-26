@@ -1,0 +1,44 @@
+/*
+ * ============================================================
+ *  LOGIN PAGE STYLES  (src/pages/Login.jsx)
+ *  Edit the values below to restyle the login page only.
+ * ============================================================
+ */
+
+.login-page {
+  /* Palette used by this page */
+  --login-brand: #6366F1;
+  --login-brand-dark: #4F46E5;
+  --login-page-bg: #F8FAFC;
+  --login-border: #E2E8F0;
+
+  background-color: var(--login-page-bg);
+}
+
+/* Gradient panel on the left side of the card */
+.login-page .login-hero {
+  background-image: linear-gradient(
+    135deg,
+    var(--login-brand),
+    var(--login-brand-dark)
+  );
+}
+
+/* Text inputs (username & password) */
+.login-page .login-input {
+  border-color: var(--login-border);
+}
+
+.login-page .login-input:focus {
+  border-color: var(--login-brand);
+}
+
+/* Sign in button */
+.login-page .login-btn {
+  background-color: var(--login-brand);
+  color: #ffffff;
+}
+
+.login-page .login-btn:hover {
+  background-color: var(--login-brand-dark);
+}

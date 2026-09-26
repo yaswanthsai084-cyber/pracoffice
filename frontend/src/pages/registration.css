@@ -1,0 +1,48 @@
+/*
+ * ============================================================
+ *  REGISTRATION PAGE STYLES  (src/pages/Registration.jsx)
+ *  Edit the values below to restyle the registration page only.
+ * ============================================================
+ */
+
+.registration-page {
+  /* Palette used by this page */
+  --registration-brand: #6366F1;
+  --registration-brand-dark: #4F46E5;
+  --registration-page-bg: #F8FAFC;
+  --registration-border: #E2E8F0;
+
+  background-color: var(--registration-page-bg);
+}
+
+/* Gradient panel on the left side of the card */
+.registration-page .registration-hero {
+  background-image: linear-gradient(
+    135deg,
+    var(--registration-brand),
+    var(--registration-brand-dark)
+  );
+}
+
+/* Text inputs (username, mobile number, email, date of birth) */
+.registration-page .registration-input {
+  border-color: var(--registration-border);
+}
+
+.registration-page .registration-input:focus {
+  border-color: var(--registration-brand);
+}
+
+/* Create account button */
+.registration-page .registration-btn {
+  background-image: linear-gradient(
+    to right,
+    var(--registration-brand),
+    var(--registration-brand-dark)
+  );
+  color: #ffffff;
+}
+
+.registration-page .registration-btn:hover {
+  filter: brightness(0.92);
+}

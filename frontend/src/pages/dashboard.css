@@ -1,0 +1,43 @@
+/*
+ * ============================================================
+ *  DASHBOARD PAGE STYLES  (src/pages/Dashboard.jsx)
+ *  Edit the values below to restyle the dashboard page only.
+ * ============================================================
+ */
+
+.dashboard-page {
+  /* Palette used by this page */
+  --dashboard-brand: #6366F1;
+  --dashboard-brand-dark: #4F46E5;
+  --dashboard-page-bg: #F8FAFC;
+  --dashboard-surface: #FFFFFF;
+  --dashboard-border: #E2E8F0;
+
+  background-color: var(--dashboard-page-bg);
+}
+
+/* Big hero banner at the top */
+.dashboard-page .dashboard-hero {
+  background-image: linear-gradient(
+    135deg,
+    var(--dashboard-brand),
+    #4F46E5,
+    var(--dashboard-brand-dark)
+  );
+}
+
+/* Start Practice Exam button inside the hero (white button on gradient) */
+.dashboard-page .dashboard-hero-btn {
+  background-color: #FFFFFF;
+  color: var(--dashboard-brand-dark);
+}
+
+.dashboard-page .dashboard-hero-btn:hover {
+  background-color: #EEF2FF;
+}
+
+/* Practice exam part cards (Word, Excel, ...) */
+.dashboard-page .dashboard-card {
+  background-color: var(--dashboard-surface);
+  border-color: var(--dashboard-border);
+}

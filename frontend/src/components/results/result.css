@@ -1,0 +1,32 @@
+/*
+ * ============================================================
+ *  RESULTS PAGE STYLES  (src/components/results/Results.jsx)
+ *  Edit the values below to restyle the results page only.
+ * ============================================================
+ */
+
+.results-page {
+  /* Palette used by this page */
+  --results-brand: #6366F1;
+  --results-brand-dark: #4F46E5;
+  --results-page-bg: #F8FAFC;
+  --results-brand-light: #EEF2FF;
+
+  background-color: var(--results-page-bg);
+}
+
+/* Round total score badge */
+.results-page .results-score {
+  background-color: var(--results-brand-light);
+  color: var(--results-brand);
+}
+
+/* Back to Dashboard button */
+.results-page .results-btn {
+  background-color: var(--results-brand);
+  color: #ffffff;
+}
+
+.results-page .results-btn:hover {
+  background-color: var(--results-brand-dark);
+}

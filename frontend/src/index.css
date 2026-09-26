@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand */
+  --color-brand: #6366F1;
+  --color-brand-dark: #4F46E5;
+  --color-brand-light: #EEF2FF;
+
+  /* Secondary */
+  --color-accent: #14B8A6;
+  --color-accent-light: #CCFBF1;
+
+  /* Highlight (blue — matches the indigo theme) */
+  --color-highlight: #6366F1;
+  --color-highlight-light: #EEF2FF;
+
+  /* Text */
+  --color-text-primary: #172033;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+
+  /* Surface */
+  --color-page: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-border: #E2E8F0;
+
+  /* Status */
+  --color-success: #22C55E;
+  --color-error: #EF4444;
+}

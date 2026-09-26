@@ -1,0 +1,27 @@
+/*
+ * ============================================================
+ *  EXAM PAGE STYLES  (src/components/exam/Exam.jsx)
+ *  Edit the values below to restyle the exam page only.
+ * ============================================================
+ */
+
+.exam-page {
+  /* Palette used by this page */
+  --exam-brand: #6366F1;
+  --exam-page-bg: #F8FAFC;
+  --exam-border: #E2E8F0;
+
+  background-color: var(--exam-page-bg);
+}
+
+/* Countdown timer badge in the header */
+.exam-page .exam-timer {
+  background-color: #F8FAFC;
+  border-color: var(--exam-border);
+}
+
+/* Active part tab (Part A · Word, ...) */
+.exam-page .exam-tab-active {
+  border-color: var(--exam-brand);
+  color: var(--exam-brand);
+}
