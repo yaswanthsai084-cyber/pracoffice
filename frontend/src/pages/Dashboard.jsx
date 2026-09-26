@@ -4,127 +4,17 @@ import Footer from "../components/common/Footer"
 import "./dashboard.css"
 
 function Dashboard() {
-  const exam = {
-    title: "Office Skills Practice Exam",
-    parts: 5,
-    durationMinutes: 30,
-    totalMarks: 50,
-  }
-
-  const quickFacts = [
-    `${exam.parts} simulated applications`,
-    `${exam.durationMinutes} minute timer`,
-    `${exam.totalMarks} total marks`,
-    "Instant results",
-  ]
-
-  const software = [
-    {
-      name: "Word",
-      part: "Part A",
-      description: "Documents & formatting",
-      interface: "Rich text editor",
-      marks: 20,
-      iconClasses: "bg-brand/10 text-brand",
-    },
-    {
-      name: "Excel",
-      part: "Part B",
-      description: "Data, formulas & formatting",
-      interface: "Spreadsheet grid",
-      marks: 20,
-      iconClasses: "bg-success/10 text-success",
-    },
-    {
-      name: "PowerPoint",
-      part: "Part C",
-      description: "Slides & presentations",
-      interface: "Slide editor",
-      marks: 20,
-      iconClasses: "bg-highlight/10 text-highlight",
-    },
-    {
-      name: "Access",
-      part: "Part D",
-      description: "Tables, records & queries",
-      interface: "Database tables",
-      marks: 20,
-      iconClasses: "bg-error/10 text-error",
-    },
-    {
-      name: "Email",
-      part: "Part E",
-      description: "Inbox & email operations",
-      interface: "Email client",
-      marks: 20,
-      iconClasses: "bg-accent/10 text-accent",
-    },
-  ]
-
-  const steps = [
-    {
-      number: "01",
-      title: "Perform",
-      detail:
-        "Complete practical tasks inside simulated Office applications that look and behave like the real software.",
-    },
-    {
-      number: "02",
-      title: "Submit",
-      detail:
-        "Complete all five parts and submit your work before the timer expires.",
-    },
-    {
-      number: "03",
-      title: "Review",
-      detail:
-        "Receive your score immediately with detailed feedback about the tasks you performed.",
-    },
-  ]
-
-  const guidelines = [
-    {
-      title: "Timer-based exam",
-      detail:
-        "The exam runs against a countdown timer and auto-submits when the time expires.",
-    },
-    {
-      title: "Single sitting",
-      detail:
-        "All five parts must be completed in one attempt — the exam cannot be resumed.",
-    },
-    {
-      title: "Rule-based evaluation",
-      detail:
-        "Every part is evaluated against specific practical rules for that application.",
-    },
-    {
-      title: "Detailed feedback",
-      detail:
-        "See exactly what was wrong and what was expected, element by element.",
-    },
-    {
-      title: "Immediate results",
-      detail: "Your score and feedback are displayed right after submission.",
-    },
-    {
-      title: "No history",
-      detail:
-        "Results are shown once after submission and are never stored.",
-    },
-  ]
-
   return (
     <div className="dashboard-page flex min-h-screen flex-col bg-page">
 
-      <Header showLogout />
+      <Header showLogout fullWidth />
 
-      <main className="flex-1">
+      <main className="flex flex-1 flex-col">
 
-        {/* Hero */}
-        <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+        {/* Hero - fullscreen */}
+        <section className="flex w-full flex-1">
 
-          <div className="dashboard-hero relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-indigo-600 to-brand-dark p-8 text-white shadow-xl shadow-brand/25 sm:p-12">
+          <div className="dashboard-hero relative flex flex-1 flex-col justify-center overflow-hidden bg-gradient-to-br from-brand via-indigo-600 to-brand-dark p-8 text-white shadow-xl shadow-brand/25 sm:p-12 lg:p-16">
 
             {/* Decorative circles */}
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10" />
@@ -134,17 +24,18 @@ function Dashboard() {
             <div className="relative z-10 max-w-3xl">
 
               <span className="inline-flex items-center rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest ring-1 ring-white/25 backdrop-blur-sm">
-                Practical Skills Assessment
+                Online Exam · Proficiency in Office Automation
               </span>
 
               <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl">
-                Practice. Perform. Improve.
+                Take the Online Exam
               </h1>
 
               <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">
-                Test how effectively you use everyday Microsoft Office
-                applications by completing realistic practical tasks inside
-                simulated interfaces.
+                This site conducts the online exam for qualifying the test
+                of proficiency in office automation — prove your skills in
+                using the computer and assisted software for everyday office
+                work.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
@@ -162,21 +53,15 @@ function Dashboard() {
 
               </div>
 
-             
-
             </div>
 
           </div>
 
         </section>
 
-        {/* Exam overview */}
-        
-
-
       </main>
 
-      <Footer />
+      <Footer fullWidth />
 
     </div>
   )
