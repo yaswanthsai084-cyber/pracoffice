@@ -10,17 +10,10 @@ function Login() {
 
   const navigate = useNavigate()
 
-<<<<<<< HEAD
   // Toggles between masked (dots) and visible password/mobile number.
   const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = (event) => {
-=======
-  const [error, setError] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-
-  const handleSubmit = async (event) => {
->>>>>>> 5c14fce (CHANGES THE BACKEND TO DATABASE CONNECTION)
     event.preventDefault()
 
     const username = event.target.username.value.trim()
@@ -187,7 +180,7 @@ function Login() {
                     <input
                       id="password"
                       name="password"
-                      type={showPassword ? "tel" : "password"}
+                      type={showPassword ? "text" : "password"}
                       inputMode="numeric"
                       autoComplete="current-password"
                       maxLength="10"
