@@ -1,0 +1,297 @@
+'use strict';
+
+/**
+ * The fixed exam paper served to the frontend by GET /api/exam.
+ *
+ * This is the server-side source of truth for the qualifying test. The
+ * frontend keeps a bundled snapshot (frontend/src/services/examData.js) that
+ * mirrors it, so the paper still renders when the API is unreachable.
+ *
+ * Part A Word (2 questions), Part B Excel (2 questions), Part C PowerPoint,
+ * Part D Access and Part E Email — 30 minutes, 50 marks. Every part carries a
+ * `questions[]` array and each question is shown on its own page with the
+ * matching software section below it.
+ */
+
+const EXAM = {
+  title:
+    'Qualifying Test — Proficiency in Office Automation with Usage of Computers and Associated Software',
+  description:
+    'Official qualifying test paper (30 minutes, 50 marks) covering MS Word, MS Excel, MS PowerPoint, MS Access and Email. Attempt all five parts and every question.',
+  duration: 30,
+  durationSeconds: 30 * 60,
+  totalMarks: 50,
+  partCount: 5,
+  parts: [
+    {
+      id: 'word',
+      key: 'A',
+      name: 'Word',
+      totalMarks: 15,
+      partOrder: 1,
+      instructions:
+        'Part A has two questions — Question 1 is the passage reproduction and Question 2 is the letter. Use the question tabs to switch between them.',
+      questions: [
+        {
+          id: 'a-q1',
+          label: 'Question 1',
+          title: 'Reproduce the given passage in MS Word (Marks: 5)',
+          marks: 5,
+          instructions: [
+            'I. Reproduce the given passage using MS Word in A-4 size page setup with font type "Arial" as per the format and guidelines given below: (Marks: 5)',
+            '',
+            'Formatting guidelines:',
+            '1. Header font size 14, centre aligned, bold and underline.',
+            '2. Double line spacing.',
+            '3. Font size 12, justified, with 0.5 inch indent in the first line in each paragraph and box in the second paragraph.',
+            '4. Insert yellow colour background in the second line of the second paragraph.',
+            '',
+            '1 The Habit of Reading',
+            "Studying is the main source of knowledge. Books are indeed never failing friends of man. For a mature mind, reading is the greatest source of pleasure and solace to distressed minds. The study of good books ennobles us and broadens our outlook. Therefore, the habit of reading should be cultivated. A student should never confine himself to his schoolbooks only. He should not miss the pleasure locked in the classics, poetry, drama, history, philosophy etc. We can derive benefit from other's experiences with the help of books. The various sufferings, endurance and joy described in books enable us to have a closer look at human life. They also inspire us to face the hardships of life courageously. Nowadays there are innumerable books and time is scarce. So we should read only the best and the greatest among them. With the help of books, we shall be able to make our thinking mature and our life more meaningful and worthwhile.",
+            '',
+            '2 A Visit to an Exhibition',
+            "Recently, an exhibition 'Building A New India' was held in the capital. It was organized by the Ministry of Information and Broadcasting, Government of India. The exhibition was set up in the Triveni Kala Sangam. The chief exhibits were photographs, novels, some sculptures by Indian modern artists presenting Indian cultural inheritance. First of all, I visited the general section of the exhibition where different charts and photographs depicting India's development in various fields were set. Most impressive photographs among these were those showing India's nuclear development. The second section dealt with India's magnificent historical background. I was fascinated by the pictures of Mohanjodaro excavation. Then I saw the most beautiful and colorful section of the exhibition i.e. the cultural section. It consisted of paintings, sculptures, photographs etc. The Rajasthani and Gujarati paintings were very colourful and attractive. This exhibition, inaugurated by the Prime Minister, lasted for a week. It proved to be of great educational value. It brushed up my knowledge about India as my motherland. It enhanced my respect for my great country, India. I would very much appreciate if the Indian government organized some more such exhibitions.",
+          ].join('\n'),
+          tasks: [
+            { id: 'a1-header', label: 'Header is 14 pt, centre aligned, bold and underline', marks: 1, penalty: false },
+            { id: 'a2-spacing', label: 'Double line spacing applied to the passage', marks: 1, penalty: false },
+            { id: 'a3-body', label: 'Body text is Arial 12 pt, justified with 0.5 inch first line indent', marks: 1, penalty: false },
+            { id: 'a4-box', label: 'Second paragraph is enclosed in a box', marks: 1, penalty: false },
+            { id: 'a5-highlight', label: 'Yellow background on the second line of the second paragraph', marks: 1, penalty: false },
+          ],
+        },
+        {
+          id: 'a-q2',
+          label: 'Question 2',
+          title: 'Type the given letter with the listed formatting (Marks: 10)',
+          marks: 10,
+          instructions: [
+            'II. Type the given letter with the formatting given in the list below. (Marks: 10)',
+            'Formatting guidelines:',
+            '1. Font size 14, centre align (department heading).',
+            '2. Font size 12.',
+            '3. Double line spacing, font size 10, centre align (Lr. Roc. No. line).',
+            '4. Single line spacing, font size 12.',
+            '5. Single line spacing, font size 12, right align (Yours faithfully block).',
+            '6. Prepare a Mail Merge document.',
+            '',
+            'GOVERNMENT OF ANDHRA PRADESH',
+            'MUNICIPAL ADMINISTRATION DEPARTMENT',
+            '',
+            'From',
+            'Dr. G. Vani Mohan, IAS',
+            'Commissioner & Director of',
+            'Municipal Administration,',
+            'Andhra Pradesh, Hyderabad.',
+            '',
+            'To',
+            'All the RDMAs in the State.',
+            "(The Municipal Commissioners of ULB's in AP through concerned RDMAs)",
+            'The Commissioner,',
+            'VMC, NMC & Guntur GVMC,',
+            '',
+            'Lr. Roc. No. 8799/2014/Co-Ord., dt : 06.02.2015',
+            '',
+            'Sir,',
+            "Sub:- MA & UD Dept - Review Meeting by the Hon'ble Minister for MA&UD, UWS and Urban Planning with the Municipal Commissioners of ULB's on 09.02.2015 from 10.00 A.M. onwards in Dr. MCRHRD Institute, Hyderabad - Request to attend - Regarding.",
+            "Ref:- Instructions received from the Hon'ble Minister's Peshi.",
+            '',
+            "It is to inform that the Hon'ble Minister MA&UD, UWS and Urban Planning desires to conduct a Review Meeting with the Municipal Commissioners of ULB's on 09.02.2015 from 10.00 A.M. onwards in Dr. MCRHRD Institute, Hyderabad on the following agenda items.",
+            '',
+            'AGENDA ITEMS:',
+            '1. Online information on all Municipal Activities',
+            '2. Best Practices on Solid Waste Management',
+            '3. e-Suvidha Modules',
+            '4. Aadhar Seeding linkage with Property Tax',
+            '5. Aadhar Seeding linkage with IHHL',
+            '',
+            "It is further informed that the Hon'ble Chief Minister, Govt. of Andhra Pradesh will review on all Municipal Activities from 4.00 P.M. to 7.00 P.M. in 7th Floor, in A.P. Secretariat, Hyderabad.",
+            '',
+            'In view of the above, you are requested to attend the Meeting on 09-02-2015 from 10.00 A.M. onwards with all the relevant material and requested to inform the Municipal Commissioners in your region to attend the meeting. You are also requested to direct all Municipal Commissioners to update information on all activities.',
+            '',
+            'Yours faithfully,',
+            'Sd/- D. VIZAI BHASKAR',
+            'for Commissioner & Director',
+            'for Commissioner to Govt (MA), MA & UD',
+            '',
+            "Copy submitted to the Principal Secretary to Hon'ble Min. for MA & UD",
+            "Copy to the OSD to Hon'ble Min. for MA & UD, Dept.",
+          ].join('\n'),
+          tasks: [
+            { id: 'a6-letter-heading', label: 'Department heading is 14 pt and centre aligned', marks: 2, penalty: false },
+            { id: 'a7-letter-body', label: 'Letter body typed in 12 pt with single line spacing', marks: 2, penalty: false },
+            { id: 'a8-letter-lrno', label: 'Lr. Roc. No. line is 10 pt, centred with double line spacing', marks: 2, penalty: false },
+            { id: 'a9-letter-signature', label: 'Yours faithfully block is right aligned in 12 pt, single spaced', marks: 2, penalty: false },
+            { id: 'a10-letter-content', label: 'Letter content reproduced correctly', marks: 1, penalty: false },
+            { id: 'a11-mailmerge', label: 'Mail Merge document prepared', marks: 1, penalty: false },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'excel',
+      key: 'B',
+      name: 'Excel',
+      totalMarks: 10,
+      partOrder: 2,
+      instructions:
+        'Part B has two questions — Question 1 is the electricity production table with formulas and Question 2 is the line graphs. Use the question tabs to switch between them.',
+      questions: [
+        {
+          id: 'b-q1',
+          label: 'Question 1',
+          title: 'Electricity production table and calculations',
+          marks: 6,
+          instructions: [
+            'Reproduce the following data in the MS-Excel sheet with centre alignment, bold and grid lines, and perform the calculations using Excel formulas.',
+            '',
+            '1. The following table shows the data of electricity production in Thousand MW, year wise. Calculate the total production year wise and for all years using Excel formulas. Also compute the columns Total (Thermal + Hydro + Solar), % of Hydro vs Total, % of Thermal vs Total and % of Solar vs Total.',
+            'Year | Thermal | Hydro | Solar Power',
+            '2010 | 93045664 | 76365463 | 4354335',
+            '2011 | 9685646 | 747566 | 5474547',
+            '2012 | 1024656 | 82163634 | 54643637',
+            '2013 | 10795364 | 8584556 | 675473667',
+            '2014 | 4564445 | 6463365 | 64344547',
+            '2015 | 34565436 | 6346543 | 536365363',
+            '2016 | 84876849 | 6353643 | 9964775',
+            '2017 | 47356262 | 585546 | 45385653',
+            '2018 | 7545743 | 435744743 | 585867754',
+            '2019 | 2547547 | 63456534 | 6535338',
+            '2020 | 65746 | 5646634 | 538358868',
+            '2021 | 63564 | 63556356 | 658386385',
+            'Total: | | |',
+          ].join('\n'),
+          tasks: [
+            { id: 'b1-data', label: 'Data reproduced with centre alignment, bold and grid lines', marks: 1, penalty: false },
+            { id: 'b2-total-year', label: 'Year-wise total computed with an Excel formula', marks: 2, penalty: false },
+            { id: 'b3-total-all', label: 'Grand total for all years computed with an Excel formula', marks: 1, penalty: false },
+            { id: 'b4-percent', label: '% of Thermal, Hydro and Solar vs Total computed with formulas', marks: 2, penalty: false },
+          ],
+        },
+        {
+          id: 'b-q2',
+          label: 'Question 2',
+          title: 'Thermal and Hydro line graphs',
+          marks: 4,
+          instructions: [
+            '2. Generate line graphs of Thermal and Hydro production, year wise.',
+            '(a) The values should be indicated on each graph.',
+            '(b) Graph value tables should be generated separately for each graph.',
+          ].join('\n'),
+          tasks: [
+            { id: 'b5-thermal-graph', label: 'Line graph of Thermal production with values shown and its own value table', marks: 2, penalty: false },
+            { id: 'b6-hydro-graph', label: 'Line graph of Hydro production with values shown and its own value table', marks: 2, penalty: false },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'powerpoint',
+      key: 'C',
+      name: 'PowerPoint',
+      totalMarks: 10,
+      partOrder: 3,
+      instructions:
+        'Part C has a single question. Complete it in the simulated MS PowerPoint window below.',
+      questions: [
+        {
+          id: 'c-q1',
+          label: 'Question 1',
+          title: 'Seeding of Ration Card database with Aadhaar',
+          marks: 10,
+          instructions: [
+            'Create a presentation file using MS-PowerPoint. The presentation must contain the layouts "Title slide with content" and "Blank slide".',
+            '',
+            'Slide 1',
+            'Title: Seeding of Ration Card database with Aadhaar',
+            'Body text in font "Verdana", size 12, text colour blue, in bulleted format:',
+            'In 2005 itself, the BPL card database has been computerized in AP. So the BPL ration card database was linked with the Aadhaar database. To facilitate this, ration card details were collected at the time of Aadhaar enrollment.',
+            'District Administration took special efforts by ensuring that Aadhaar enrollment is done with KYR plus data of ration card to maximum possible extent. Special training was done for revenue and civil supplies staff and awareness programmes were conducted for citizens.',
+            "After Aadhaar numbers were generated the details were periodically linked to the ration card database to get a list of Aadhaar numbers under each card. This process is technically called 'Inorganic Seeding'.",
+            '',
+            'Slide 2',
+            'Title: Few advantages of digital libraries',
+            'Body text in font "Verdana", size 12, text colour blue, in bulleted format:',
+            '• Access anywhere',
+            '• Reducing delays',
+            '• Distributed storage – central access',
+            '• Better cataloguing',
+            '• Cross references to other documents',
+            '• Full text search',
+            '• Protected information source',
+            '• Wide exploration and exploitation of the information',
+            '',
+            'Generate an animation on button click; the animation type should be Randomization.',
+          ].join('\n'),
+          tasks: [
+            { id: 'c1-layout', label: 'Presentation uses the "Title slide with content" and "Blank slide" layouts', marks: 2, penalty: false },
+            { id: 'c2-slide1', label: 'Slide 1 title and the bulleted Aadhaar seeding content', marks: 2, penalty: false },
+            { id: 'c3-slide2', label: 'Slide 2 title and the eight digital-library advantages', marks: 2, penalty: false },
+            { id: 'c4-font', label: 'Body text is Verdana 12 pt and blue', marks: 2, penalty: false },
+            { id: 'c5-animation', label: 'Animation on button click with Randomization type', marks: 2, penalty: false },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'access',
+      key: 'D',
+      name: 'Access',
+      totalMarks: 10,
+      partOrder: 4,
+      instructions:
+        'Part D has a single question. Complete it in the simulated MS Access window below.',
+      questions: [
+        {
+          id: 'd-q1',
+          label: 'Question 1',
+          title: 'Create the Access database, views and filters',
+          marks: 10,
+          instructions: [
+            'Create an MS Access database to store the data as shown in the MS Excel Part-B.',
+            'Generate views on sort and filters on Years.',
+            'Write the CREATE TABLE statement for table generation.',
+          ].join('\n'),
+          tasks: [
+            { id: 'd1-table', label: 'Table created to store the Part-B electricity data', marks: 4, penalty: false },
+            { id: 'd2-views', label: 'Views generated with a sort on Years', marks: 3, penalty: false },
+            { id: 'd3-filters', label: 'Filters applied on Years', marks: 3, penalty: false },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'email',
+      key: 'E',
+      name: 'Email',
+      totalMarks: 5,
+      partOrder: 5,
+      instructions:
+        'Part E has a single question. Compose and send the email in the simulated mail window below.',
+      questions: [
+        {
+          id: 'e-q1',
+          label: 'Question 1',
+          title: 'Send the Republic Day arrangements email',
+          marks: 5,
+          instructions: [
+            'Use any browser, open your email id and send an email to apego@nic.in.',
+            'Mail to be addressed to the Collector.',
+            'Subject of the email is "Republic Day Function Arrangements".',
+            'The body of the email should contain the Arrangements for the Republic Day function going to be held.',
+          ].join('\n'),
+          tasks: [
+            { id: 'e1-recipient', label: 'Email sent to apego@nic.in and addressed to the Collector', marks: 2, penalty: false },
+            { id: 'e2-subject', label: 'Subject is "Republic Day Function Arrangements"', marks: 1, penalty: false },
+            { id: 'e3-body', label: 'Body contains the Republic Day function arrangements', marks: 2, penalty: false },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+/** Returns a deep copy so callers can never mutate the shared paper. */
+const getExamPaper = () => JSON.parse(JSON.stringify(EXAM));
+
+module.exports = { EXAM, getExamPaper };

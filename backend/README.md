@@ -7,8 +7,9 @@ Node.js + Express + Sequelize backend for PracOffice, focused on the
 * `frontend/src/pages/Login.jsx` → `POST /api/auth/login`
 
 The mobile number collected at registration is the account password
-(hashed with bcrypt), exactly as the forms tell the student. The exam API
-(`GET /api/exam`, `POST /api/exam/submit`) is not part of this folder yet.
+(hashed with bcrypt), exactly as the forms tell the student. The exam paper is
+served by `GET /api/exam` and a finished attempt is accepted by
+`POST /api/exam/submit` (the paper itself lives in `services/examPaper.js`).
 
 ---
 
@@ -180,6 +181,32 @@ instead of `dateOfBirth`, and an optional `name`.
 ### `GET /api/auth/me` 🔒
 
 `200` → `{ "user": { "id", "name", "email", "mobile", "dob", "username", "createdAt" } }`
+
+### `GET /api/exam` 🔒
+
+The fixed qualifying-test paper - exactly what
+`frontend/src/services/examService.js` renders. `services/examPaper.js` is the
+source of truth; the frontend keeps a bundled snapshot of the same paper so it
+can still render when the API is unreachable.
+
+`200` → `{ "exam": { "title", "description", "duration": 30, "durationSeconds", "totalMarks": 50, "partCount": 5, "parts": [ ... ] } }`
+
+Every part carries `id`, `key` (A–E), `name`, `totalMarks` and a `questions[]`
+array. Each question has `id`, `label`, `title`, `marks`, `instructions`
+(newline separated, exactly as the page renders them) and its graded `tasks[]`.
+Parts A and B hold **two questions each**, so the paper has **seven question
+pages**; each page shows its question and the matching software section below
+it. Question marks add up to the part total (15/10/10/10/5) and the parts to 50.
+
+### `POST /api/exam/submit` 🔒
+
+Body: the finished attempt, for example `{ "parts": { "word": { ... } } }`
+(the current frontend sends `{ "parts": {} }`). An empty body is accepted.
+
+`200` → `{ "message": "Exam submitted successfully. Evaluation is pending.", "submittedAt": "...", "totalMarks": 50, "obtainedMarks": 0, "status": "pending", "parts": [ { "id", "key", "name", "totalMarks", "obtainedMarks", "status" } ] }`
+
+Automatic per-task marking is not implemented yet, so every part is reported as
+`pending` - the same state the Results page displays.
 
 ### `GET /api/health`
 

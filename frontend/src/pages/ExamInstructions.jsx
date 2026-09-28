@@ -19,12 +19,26 @@ const EXAM_RULES = [
   "This is a single sitting of 30 minutes. The countdown starts the moment you click Start Exam.",
   "The paper carries a total of 50 marks and is divided into five parts: A, B, C, D and E.",
   "Part A is MS Word, Part B is MS Excel, Part C is MS PowerPoint, Part D is MS Access and Part E is sending an email.",
-  "Every part must be attempted; the tasks of the active part are listed in the instructions panel on the exam page.",
-  "Move between the parts with the part tabs or the Previous / Next buttons at the bottom of the exam page.",
+  "Some parts contain more than one question — Part A and Part B each have two. Every question is shown on its own page.",
+  "The question is placed at the top of the page and the matching software section (MS Word, MS Excel, ...) appears below it.",
+  "Move between the parts with the part tabs, between the questions with the question tabs, and through the whole paper with the Previous / Next buttons.",
   "The exam is submitted automatically as soon as the timer reaches 00:00, so keep an eye on the countdown.",
-  "You may also submit early from the last part once you have finished all the tasks.",
+  "You may also submit early from the last question once you have finished all the tasks.",
   "Do not refresh or close the exam window, and make sure your internet connection is stable.",
 ]
+
+/** Number of questions in a part (older papers without `questions` count as one). */
+const countQuestions = (part) =>
+  Array.isArray(part.questions) && part.questions.length > 0
+    ? part.questions.length
+    : 1
+
+/** Graded tasks across every question of a part. */
+const countTasks = (part) =>
+  (Array.isArray(part.questions) && part.questions.length > 0
+    ? part.questions
+    : [part]
+  ).reduce((sum, question) => sum + (question.tasks?.length ?? 0), 0)
 
 /** Minutes -> "30 minutes". */
 const describeDuration = (minutes) => {
@@ -164,6 +178,7 @@ function ExamInstructions() {
                   <tr>
                     <th className="px-5 py-3 font-semibold">Part</th>
                     <th className="px-5 py-3 font-semibold">Software</th>
+                    <th className="px-5 py-3 font-semibold">Questions</th>
                     <th className="px-5 py-3 font-semibold">Tasks</th>
                     <th className="px-5 py-3 text-right font-semibold">Marks</th>
                   </tr>
@@ -179,7 +194,10 @@ function ExamInstructions() {
                         {SOFTWARE_LABELS[part.id] || part.name}
                       </td>
                       <td className="px-5 py-3 text-text-secondary">
-                        {part.tasks?.length ?? 0}
+                        {countQuestions(part)}
+                      </td>
+                      <td className="px-5 py-3 text-text-secondary">
+                        {countTasks(part)}
                       </td>
                       <td className="px-5 py-3 text-right font-semibold text-text-primary">
                         {part.totalMarks}
@@ -190,7 +208,7 @@ function ExamInstructions() {
 
                 <tfoot className="border-t border-border bg-page">
                   <tr>
-                    <td className="px-5 py-3 font-bold text-text-primary" colSpan={3}>
+                    <td className="px-5 py-3 font-bold text-text-primary" colSpan={4}>
                       Total
                     </td>
                     <td className="px-5 py-3 text-right font-bold text-brand">
