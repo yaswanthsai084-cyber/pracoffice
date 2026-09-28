@@ -1,13 +1,16 @@
 import { useState } from "react"
-import { Link, useNavigate} from "react-router-dom"
+import { Link, useLocation, useNavigate} from "react-router-dom"
 import Header from "../components/common/Header"
 import Footer from "../components/common/Footer"
-import { loginUser, saveToken, describeError } from "../services/authService"
+import { loginUser, describeError } from "../services/authService"
+import { useAuth } from "../context/AuthContext"
 import "./login.css"
 
 function Login() {
 
   const navigate = useNavigate()
+  const location = useLocation()
+  const { login } = useAuth()
 
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
@@ -32,8 +35,9 @@ function Login() {
     try {
       // POST /api/auth/login - the password is the registered mobile number.
       const session = await loginUser({ username, password })
-      saveToken(session.token)
-      navigate("/dashboard")
+      login(session.token, session.user)
+      // Return to the page the guard bounced the student away from.
+      navigate(location.state?.from || "/dashboard", { replace: true })
     } catch (requestError) {
       setError(describeError(requestError))
     } finally {
@@ -44,7 +48,7 @@ function Login() {
   return (
     <div className="login-page flex min-h-screen flex-col bg-page">
 
-      <Header />
+      <Header fullWidth />
 
       <main className="flex flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
 

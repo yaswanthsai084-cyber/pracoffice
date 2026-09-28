@@ -1,0 +1,42 @@
+/*
+ * ============================================================
+ *  EXAM INSTRUCTIONS PAGE STYLES  (src/pages/ExamInstructions.jsx)
+ *  Edit the values below to restyle the instructions page only.
+ * ============================================================
+ */
+
+.instructions-page {
+  /* Palette used by this page */
+  --instructions-brand: #6366F1;
+  --instructions-brand-dark: #4F46E5;
+  --instructions-page-bg: #F8FAFC;
+  --instructions-border: #E2E8F0;
+
+  background-color: var(--instructions-page-bg);
+}
+
+/* Quick-fact cards (total marks, duration, parts) */
+.instructions-page .instructions-fact {
+  border-color: var(--instructions-border);
+}
+
+/* Numbered circle in the general instructions list */
+.instructions-page .instructions-rule-number {
+  background-color: #EEF2FF;
+  color: var(--instructions-brand-dark);
+}
+
+/* Compulsory acknowledgement radio button */
+.instructions-page .instructions-radio {
+  accent-color: var(--instructions-brand);
+}
+
+/* Start Exam button (disabled until the radio button is selected) */
+.instructions-page .instructions-start-btn {
+  background-color: var(--instructions-brand);
+  color: #FFFFFF;
+}
+
+.instructions-page .instructions-start-btn:hover:enabled {
+  background-color: var(--instructions-brand-dark);
+}

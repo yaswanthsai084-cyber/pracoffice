@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom"
 import Header from "../components/common/Header"
 import Footer from "../components/common/Footer"
+import { useAuth } from "../context/AuthContext"
 import "./dashboard.css"
 
 function Dashboard() {
+  const { isAuthenticated, loading } = useAuth()
+
   return (
     <div className="dashboard-page flex min-h-screen flex-col bg-page">
 
@@ -40,16 +43,44 @@ function Dashboard() {
 
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
 
-                <Link
-                  to="/exam"
-                  className="dashboard-hero-btn rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-brand-dark shadow-lg transition hover:-translate-y-0.5 hover:bg-indigo-50"
-                >
-                  Start Practice Exam
-                </Link>
+                {loading ? (
+                  <span className="text-sm text-white/75">
+                    Checking your session...
+                  </span>
+                ) : isAuthenticated ? (
+                  <>
+                    <Link
+                      to="/exam/instructions"
+                      className="dashboard-hero-btn rounded-xl px-6 py-3.5 text-sm font-semibold shadow-lg transition hover:-translate-y-0.5"
+                    >
+                      Start Exam
+                    </Link>
 
-                <span className="text-sm text-white/75">
-                  Single sitting · Auto-submits when the timer expires
-                </span>
+                    <span className="text-sm text-white/75">
+                      Single sitting · Auto-submits when the timer expires
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="dashboard-hero-btn rounded-xl px-6 py-3.5 text-sm font-semibold shadow-lg transition hover:-translate-y-0.5"
+                    >
+                      Login
+                    </Link>
+
+                    <Link
+                      to="/register"
+                      className="dashboard-hero-btn-ghost rounded-xl border px-6 py-3.5 text-sm font-semibold transition hover:-translate-y-0.5"
+                    >
+                      Register
+                    </Link>
+
+                    <span className="text-sm text-white/75">
+                      Sign in to write the exam · New here? Register first.
+                    </span>
+                  </>
+                )}
 
               </div>
 

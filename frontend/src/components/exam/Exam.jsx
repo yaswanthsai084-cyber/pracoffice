@@ -87,7 +87,7 @@ function Exam() {
     return (
       <div className="flex min-h-screen flex-col bg-page">
 
-        <Header />
+        <Header fullWidth />
 
         <main className="flex flex-1 items-center justify-center px-4 py-16">
 
@@ -101,7 +101,7 @@ function Exam() {
 
         </main>
 
-        <Footer />
+        <Footer fullWidth />
 
       </div>
     )
@@ -110,14 +110,14 @@ function Exam() {
   return (
     <div className="exam-page flex min-h-screen flex-col bg-page">
 
-      <Header />
+      <Header fullWidth />
 
       <main className="flex-1">
 
         {/* Exam header */}
         <div className="sticky top-0 z-20 border-b border-border bg-surface/95 backdrop-blur">
 
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
+          <div className="flex w-full flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-brand">
@@ -159,7 +159,7 @@ function Exam() {
         {/* Part navigation */}
         <div className="border-b border-border bg-surface">
 
-          <div className="mx-auto flex max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex w-full overflow-x-auto px-4 sm:px-6 lg:px-8">
 
             {exam.parts.map((part, index) => (
               <button
@@ -180,7 +180,7 @@ function Exam() {
         </div>
 
         {/* Workspace */}
-        <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="w-full px-4 py-8 sm:px-6 lg:px-8">
 
           <div className="grid gap-6 lg:grid-cols-[380px,1fr]">
 
@@ -315,7 +315,7 @@ function Exam() {
 
       </main>
 
-      <Footer />
+      <Footer fullWidth />
 
     </div>
   )
