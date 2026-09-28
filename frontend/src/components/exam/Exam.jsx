@@ -18,16 +18,44 @@ const formatTime = (totalSeconds) => {
     : `${pad(minutes)}:${pad(remainder)}`
 }
 
+/** Part letter fallback: 0 -> A, 1 -> B, ... */
+const partLetter = (part, index) => part?.key || String.fromCharCode(65 + index)
+
+/**
+ * Every part carries one or more questions and each question is shown on its
+ * own page. Older papers (or the backend) may supply only `instructions`, so
+ * a single synthetic question is derived in that case.
+ */
+const resolveQuestions = (part) => {
+  if (!part) return []
+
+  if (Array.isArray(part.questions) && part.questions.length > 0) {
+    return part.questions
+  }
+
+  return [
+    {
+      id: `${part.id || part.name}-q1`,
+      label: "Question 1",
+      title: part.name || "",
+      marks: part.totalMarks ?? 0,
+      instructions: part.instructions ?? "",
+      tasks: part.tasks ?? [],
+    },
+  ]
+}
+
 function Exam() {
   const navigate = useNavigate()
 
   const [exam, setExam] = useState(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Load the exam paper from the backend; fall back to the bundled
-  // snapshot when the API is unreachable or not authenticated yet.
+  // Load the exam paper from the backend; fall back to the bundled snapshot
+  // when the API is unreachable or the student is not authenticated yet.
   useEffect(() => {
     let cancelled = false
 
@@ -57,7 +85,46 @@ function Exam() {
   }, [exam])
 
   const activePart = exam ? exam.parts[activeIndex] : null
+  const activeQuestions = resolveQuestions(activePart)
+  const safeQuestionIndex = Math.min(
+    activeQuestionIndex,
+    Math.max(0, activeQuestions.length - 1)
+  )
+  const activeQuestion = activeQuestions[safeQuestionIndex] || null
   const activeLink = activePart?.link
+
+  // Flat list of every question in the paper (A-Q1, A-Q2, B-Q1, ...) used by
+  // the Previous / Next buttons so they walk question by question.
+  const steps = exam
+    ? exam.parts.flatMap((part, partIndex) =>
+        resolveQuestions(part).map((question, questionIndex) => ({
+          partIndex,
+          questionIndex,
+        }))
+      )
+    : []
+
+  const foundStep = steps.findIndex(
+    (step) =>
+      step.partIndex === activeIndex && step.questionIndex === safeQuestionIndex
+  )
+  const currentStep = foundStep < 0 ? 0 : foundStep
+  const totalQuestions = steps.length
+
+  /** Opens a part at its first question. */
+  const openPart = (index) => {
+    setActiveIndex(index)
+    setActiveQuestionIndex(0)
+  }
+
+  /** Jumps to any question in the paper (Previous / Next navigation). */
+  const goToStep = (index) => {
+    const step = steps[index]
+    if (!step) return
+
+    setActiveIndex(step.partIndex)
+    setActiveQuestionIndex(step.questionIndex)
+  }
 
   /** Submits the exam and moves to the results page. */
   const handleSubmit = async () => {
@@ -83,7 +150,7 @@ function Exam() {
   }, [exam, secondsLeft])
 
   // Loading state while the exam paper is being fetched.
-  if (!exam) {
+  if (!exam || !activePart || !activeQuestion) {
     return (
       <div className="flex min-h-screen flex-col bg-page">
 
@@ -164,14 +231,14 @@ function Exam() {
             {exam.parts.map((part, index) => (
               <button
                 key={part.id || part.name}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => openPart(index)}
                 className={`whitespace-nowrap border-b-2 px-5 py-4 text-sm font-semibold transition ${
                   activeIndex === index
                     ? "exam-tab-active border-brand text-brand"
                     : "border-transparent text-text-secondary hover:text-brand"
                 }`}
               >
-                Part {part.key || String.fromCharCode(65 + index)} · {part.name}
+                Part {partLetter(part, index)} · {part.name}
               </button>
             ))}
 
@@ -179,93 +246,126 @@ function Exam() {
 
         </div>
 
-        {/* Workspace */}
+        {/* Question navigation: only for parts with more than one question */}
+        {activeQuestions.length > 1 && (
+          <div className="border-b border-border bg-page">
+
+            <div className="flex w-full flex-wrap items-center gap-2 px-4 py-3 sm:px-6 lg:px-8">
+
+              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                Questions in Part {partLetter(activePart, activeIndex)}
+              </span>
+
+              {activeQuestions.map((question, index) => (
+                <button
+                  key={question.id || index}
+                  onClick={() => setActiveQuestionIndex(index)}
+                  title={question.title}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
+                    index === safeQuestionIndex
+                      ? "border-brand bg-brand-light text-brand"
+                      : "border-border bg-surface text-text-secondary hover:text-brand"
+                  }`}
+                >
+                  {question.label}
+                </button>
+              ))}
+
+            </div>
+
+          </div>
+        )}
+
+        {/* One question per page, with the matching software section below it */}
         <section className="w-full px-4 py-8 sm:px-6 lg:px-8">
 
-          <div className="grid gap-6 lg:grid-cols-[380px,1fr]">
+          {/* Question shown on this page */}
+          <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-border">
 
-            {/* Question panel */}
-            <aside className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5">
 
-              <div className="rounded-2xl bg-surface shadow-sm ring-1 ring-border">
-
-                <div className="border-b border-border p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-brand">
-                    Part {activePart.key || String.fromCharCode(65 + activeIndex)} · {activePart.totalMarks} marks
-                  </p>
-
-                  <h2 className="mt-1 text-xl font-bold text-text-primary">
-                    {activePart.name} tasks
-                  </h2>
-                </div>
-
-                <div className="p-5">
-                  {activePart.instructions.split("\n").map((line, index) => (
-                    <p
-                      key={index}
-                      className={
-                        index === 0
-                          ? "text-sm font-medium text-text-primary"
-                          : "mt-2 text-sm leading-6 text-text-secondary"
-                      }
-                    >
-                      {line}
-                    </p>
-                  ))}
-                </div>
-
-              </div>
-
-            </aside>
-
-            {/* Simulated application frame */}
-            <div className="flex min-h-[620px] flex-col overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
-
-              <div className="flex items-center justify-between border-b border-border bg-page px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-error/70" />
-                  <span className="h-3 w-3 rounded-full bg-highlight/70" />
-                  <span className="h-3 w-3 rounded-full bg-success/70" />
-                </div>
-
-                <p className="text-xs font-semibold text-text-secondary">
-                  Simulated {activePart.name} application
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-brand">
+                  Part {partLetter(activePart, activeIndex)} · {activePart.name}
                 </p>
 
-                <span className="text-xs text-text-muted">
-                  Part {activePart.key || String.fromCharCode(65 + activeIndex)}
-                </span>
+                <h2 className="mt-1 text-xl font-bold text-text-primary">
+                  {activeQuestion.label}
+                  {activeQuestion.title ? `: ${activeQuestion.title}` : ""}
+                </h2>
               </div>
 
-              <div className="flex flex-1 items-center justify-center p-8">
+              <span className="rounded-full bg-brand-light px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-brand">
+                {activeQuestion.marks} marks
+              </span>
 
-                <div className="max-w-md text-center">
+            </div>
 
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-light text-xl font-bold text-brand">
-                    {activePart.name.charAt(0)}
-                  </div>
+            <div className="p-5">
+              {(activeQuestion.instructions || "").split("\n").map((line, index) => (
+                <p
+                  key={index}
+                  className={
+                    index === 0
+                      ? "text-sm font-medium text-text-primary"
+                      : "mt-2 text-sm leading-6 text-text-secondary"
+                  }
+                >
+                  {line}
+                </p>
+              ))}
+            </div>
 
-                  <h3 className="mt-5 text-xl font-bold text-text-primary">
-                    {activePart.name} workspace
-                  </h3>
+          </div>
 
-                  {activeLink ? (
-                    <a
-                      href={activeLink.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition hover:-translate-y-0.5 hover:bg-brand-dark"
-                    >
-                      {activeLink.label}
-                      <span aria-hidden="true">↗</span>
-                    </a>
-                  ) : (
-                    <p className="mt-5 text-sm font-medium text-text-secondary">
-                      Continue completing the tasks listed in the instructions panel.
-                    </p>
-                  )}
+          {/* Simulated software section, below the question */}
+          <div className="mt-6 flex min-h-[560px] flex-col overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
 
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-page px-4 py-3">
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-error/70" />
+                <span className="h-3 w-3 rounded-full bg-highlight/70" />
+                <span className="h-3 w-3 rounded-full bg-success/70" />
+              </div>
+
+              <p className="text-xs font-semibold text-text-secondary">
+                Simulated {activePart.name} application
+              </p>
+
+              <span className="text-xs text-text-muted">
+                Part {partLetter(activePart, activeIndex)} · {activeQuestion.label}
+              </span>
+
+            </div>
+
+            <div className="flex flex-1 items-center justify-center p-8">
+
+              <div className="max-w-md text-center">
+
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-light text-xl font-bold text-brand">
+                  {activePart.name.charAt(0)}
                 </div>
+
+                <h3 className="mt-5 text-xl font-bold text-text-primary">
+                  {activePart.name} workspace
+                </h3>
+
+                {activeLink ? (
+                  <a
+                    href={activeLink.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition hover:-translate-y-0.5 hover:bg-brand-dark"
+                  >
+                    {activeLink.label}
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                ) : (
+                  <p className="mt-5 text-sm font-medium text-text-secondary">
+                    Continue completing this question in the workspace provided.
+                  </p>
+                )}
 
               </div>
 
@@ -273,31 +373,27 @@ function Exam() {
 
           </div>
 
-          {/* Navigation */}
-          <div className="mt-6 flex items-center justify-between">
+          {/* Navigation across every question in the paper */}
+          <div className="mt-6 flex items-center justify-between gap-4">
 
             <button
-              onClick={() => setActiveIndex((current) => Math.max(0, current - 1))}
-              disabled={activeIndex === 0}
+              onClick={() => goToStep(currentStep - 1)}
+              disabled={currentStep === 0}
               className="rounded-xl border border-border bg-surface px-5 py-3 text-sm font-semibold text-text-secondary transition enabled:hover:bg-page disabled:cursor-not-allowed disabled:opacity-50"
             >
               ← Previous
             </button>
 
-            <p className="text-sm font-medium text-text-muted">
-              Part {activeIndex + 1} of {exam.parts.length}
+            <p className="text-center text-sm font-medium text-text-muted">
+              Question {currentStep + 1} of {totalQuestions}
             </p>
 
-            {activeIndex < exam.parts.length - 1 ? (
+            {currentStep < totalQuestions - 1 ? (
               <button
-                onClick={() =>
-                  setActiveIndex((current) =>
-                    Math.min(exam.parts.length - 1, current + 1)
-                  )
-                }
+                onClick={() => goToStep(currentStep + 1)}
                 className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition hover:bg-brand-dark"
               >
-                Next Part →
+                Next Question →
               </button>
             ) : (
               <button

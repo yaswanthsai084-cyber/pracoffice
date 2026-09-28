@@ -9,6 +9,8 @@
  *   POST /api/auth/register
  *   POST /api/auth/login
  *   GET  /api/auth/me
+ *   GET  /api/exam
+ *   POST /api/exam/submit
  */
 
 const express = require('express');
