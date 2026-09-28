@@ -21,13 +21,18 @@ export class ApiError extends Error {
   }
 }
 
-const call = async (path, { method = "GET", body } = {}) => {
+const call = async (path, { method = "GET", body, token } = {}) => {
+  const headers = { "Content-Type": "application/json" }
+
+  // Authorized endpoints (GET /api/auth/me) need the stored JWT.
+  if (token) headers.Authorization = `Bearer ${token}`
+
   let response
 
   try {
     response = await fetch(`${API_BASE}${path}`, {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
@@ -77,6 +82,18 @@ export const saveToken = (token) => localStorage.setItem("token", token)
 
 /** Removes the stored JWT (used by the header's Logout button). */
 export const clearToken = () => localStorage.removeItem("token")
+
+/** Returns the stored JWT, or null for a guest. */
+export const getToken = () => localStorage.getItem("token")
+
+/** True when a JWT is stored. The API stays the final authority. */
+export const isAuthenticated = () => Boolean(getToken())
+
+/** GET /api/auth/me - the signed-in profile for the stored token. */
+export const fetchCurrentUser = async () => {
+  const payload = await call("/api/auth/me", { token: getToken() })
+  return payload.user || null
+}
 
 /** Turns an ApiError into one user-readable line (including field errors). */
 export const describeError = (error) => {

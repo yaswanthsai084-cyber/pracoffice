@@ -43,7 +43,7 @@ function Registration() {
   return (
     <div className="registration-page flex min-h-screen flex-col bg-slate-50">
 
-      <Header />
+      <Header fullWidth />
 
       <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
 
