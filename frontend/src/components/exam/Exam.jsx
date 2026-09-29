@@ -53,6 +53,9 @@ function Exam() {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  // Typed answers keyed by task id ({ "e2-subject": "Republic Day ..." }).
+  // Kept outside `exam` so typing never re-creates the paper object.
+  const [answers, setAnswers] = useState({})
 
   // Load the exam paper from the backend; fall back to the bundled snapshot
   // when the API is unreachable or the student is not authenticated yet.
@@ -93,6 +96,12 @@ function Exam() {
   const activeQuestion = activeQuestions[safeQuestionIndex] || null
   const activeLink = activePart?.link
 
+  // Only the tasks the backend can mark get an input; formatting/layout work
+  // is graded by an examiner, so it is shown as a checklist without a box.
+  const autoTasks = (activeQuestion?.tasks || []).filter(
+    (task) => task.grading && task.grading !== "manual"
+  )
+
   // Flat list of every question in the paper (A-Q1, A-Q2, B-Q1, ...) used by
   // the Previous / Next buttons so they walk question by question.
   const steps = exam
@@ -126,6 +135,11 @@ function Exam() {
     setActiveQuestionIndex(step.questionIndex)
   }
 
+  /** Records what the student typed for a task. */
+  const setAnswer = (taskId, value) => {
+    setAnswers((current) => ({ ...current, [taskId]: value }))
+  }
+
   /** Submits the exam and moves to the results page. */
   const handleSubmit = async () => {
     if (submitting) return
@@ -133,7 +147,12 @@ function Exam() {
     setSubmitting(true)
 
     try {
-      await submitExam({ parts: {} })
+      // Empty strings are dropped so an untouched box is never graded as an
+      // attempt, and the backend still receives every answered task.
+      const payload = Object.fromEntries(
+        Object.entries(answers).filter(([, value]) => value.trim() !== "")
+      )
+      await submitExam(payload)
       navigate("/results")
     } catch (error) {
       window.alert(error.message || "Could not submit the exam right now.")
@@ -314,6 +333,46 @@ function Exam() {
                   {line}
                 </p>
               ))}
+            </div>
+
+            {/* Typed answers for the tasks the backend can mark automatically.
+                Tasks without an input are practical work graded by an examiner. */}
+            <div className="space-y-4 border-t border-border p-5">
+
+              {autoTasks.length > 0 && autoTasks.map((task) => (
+                <div key={task.id}>
+
+                  <label
+                    htmlFor={`answer-${task.id}`}
+                    className="flex items-start justify-between gap-3 text-sm font-semibold text-text-primary"
+                  >
+                    <span>{task.label}</span>
+                    <span className="shrink-0 rounded-full bg-brand-light px-3 py-1 text-xs font-bold text-brand">
+                      {task.marks} {task.marks === 1 ? "mark" : "marks"}
+                    </span>
+                  </label>
+
+                  <textarea
+                    id={`answer-${task.id}`}
+                    rows={task.id === "a10-letter-content" || task.id === "e3-body" ? 5 : 2}
+                    value={answers[task.id] || ""}
+                    onChange={(event) => setAnswer(task.id, event.target.value)}
+                    placeholder={task.placeholder || "Type your answer here…"}
+                    className="mt-2 w-full resize-y rounded-xl border border-border bg-page px-4 py-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-brand focus:ring-4 focus:ring-brand/10"
+                  />
+
+                </div>
+              ))}
+
+              {(activeQuestion.tasks || []).length > autoTasks.length && (
+                <p className="text-xs leading-5 text-text-muted">
+                  The remaining{" "}
+                  {(activeQuestion.tasks || []).length - autoTasks.length} item(s) in this
+                  question are practical tasks (formatting, charts, slides) marked by
+                  an examiner.
+                </p>
+              )}
+
             </div>
 
           </div>

@@ -20,6 +20,35 @@ const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+/**
+ * Reads the body as text and only treats it as JSON when the response says so.
+ *
+ * This matters when the backend is down: the Vite proxy then answers with a
+ * plain-text 500, and `response.json()` throws, leaving `payload` null. Without
+ * this check the student only saw "Exam submission failed" and had no way to
+ * tell a dead backend from a rejected answer.
+ */
+const readPayload = async (response) => {
+  const raw = await response.text().catch(() => "")
+  const contentType = response.headers.get("content-type") || ""
+
+  return contentType.includes("application/json") && raw !== "" ? JSON.parse(raw) : null
+}
+
+/** Throws with the real reason: a dead backend is not a failed submission. */
+const ensureOk = (response, payload) => {
+  if (response.ok) return payload
+
+  if (payload === null) {
+    throw new Error(
+      `The backend is not responding (HTTP ${response.status}). ` +
+        `Start it with "npm run dev" in the backend folder, then submit again.`
+    )
+  }
+
+  throw new Error(payload.message || `Request failed with status ${response.status}`)
+}
+
 const configureExam = (data) => ({
   ...data,
   duration: 30,
@@ -32,7 +61,13 @@ const configureExam = (data) => ({
   })),
 })
 
-/** Loads the exam paper (backend first, bundled snapshot as fallback). */
+/**
+ * Loads the exam paper (backend first, bundled snapshot as fallback).
+ *
+ * The fallback is deliberately silent so the paper still renders when the API
+ * is unreachable - but `submitExam` is not silent, so a submit against a dead
+ * backend now reports the real reason instead of a generic failure.
+ */
 export const fetchExam = async () => {
   try {
     const response = await fetch(`${API_BASE}/api/exam`, {
@@ -57,22 +92,35 @@ export const fetchExam = async () => {
   }
 }
 
-/** Submits the exam for evaluation (immediate results, nothing stored). */
-export const submitExam = async (submission) => {
+/** Submits the typed answers; the backend grades them and returns the result. */
+export const submitExam = async (answers) => {
   const response = await fetch(`${API_BASE}/api/exam/submit`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
-    body: JSON.stringify(submission),
+    body: JSON.stringify({ answers }),
   })
 
-  const payload = await response.json().catch(() => null)
+  return ensureOk(response, await readPayload(response))
+}
 
-  if (!response.ok) {
-    throw new Error(payload?.message || "Exam submission failed")
+/**
+ * Loads the signed-in student's most recent graded attempt.
+ *
+ * The results page reads the result from the API rather than from router state
+ * so a page refresh, or opening /results directly, still shows the real marks.
+ */
+export const fetchResult = async () => {
+  const response = await fetch(`${API_BASE}/api/exam/result`, {
+    headers: getAuthHeaders(),
+  })
+
+  // No attempt yet: the page shows a "start the exam" state, not an error.
+  if (response.status === 404) {
+    return null
   }
 
-  return payload
+  return (await ensureOk(response, await readPayload(response))).result ?? null
 }

@@ -9,8 +9,10 @@ const { sequelize, Sequelize, DataTypes, jsonType, dialect } = require('../confi
 const config = require('../config/env');
 
 const defineUser = require('./user');
+const defineExamAttempt = require('./examAttempt');
 
 const User = defineUser(sequelize, DataTypes);
+const ExamAttempt = defineExamAttempt(sequelize, DataTypes, jsonType);
 
 /**
  * Creates any missing tables.
@@ -33,5 +35,6 @@ module.exports = {
   jsonType,
   dialect,
   User,
+  ExamAttempt,
   syncDatabase,
 };

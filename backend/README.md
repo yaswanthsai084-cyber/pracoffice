@@ -144,6 +144,15 @@ Tables follow the project plan (snake_case columns, `created_at` only).
 **users** — `id`, `name`, `email` (unique), `mobile` (unique), `dob` (DATEONLY),
 `username` (unique), `password` (bcrypt hash of the mobile number), `created_at`.
 
+**exam_attempts** — `id`, `user_id`, `total_marks`, `auto_obtained_marks`,
+`auto_total_marks`, `manual_marks`, `answers` (JSONB, the raw typed answers),
+`result` (JSONB, the graded per-task breakdown the results page renders),
+`created_at`. One row per submission; `GET /api/exam/result` returns the newest
+for the signed-in student.
+
+Storing the breakdown as JSON means the results page keeps showing exactly what
+was marked, even after a reload and even if the paper is edited later.
+
 Tables are created automatically on boot (`sequelize.sync()`); `alter` is opt-in.
 
 ### Authentication rules
@@ -226,13 +235,68 @@ it. Question marks add up to the part total (15/10/10/10/5) and the parts to 50.
 
 ### `POST /api/exam/submit` 🔒
 
-Body: the finished attempt, for example `{ "parts": { "word": { ... } } }`
-(the current frontend sends `{ "parts": {} }`). An empty body is accepted.
+Marks the attempt and stores it.
 
-`200` → `{ "message": "Exam submitted successfully. Evaluation is pending.", "submittedAt": "...", "totalMarks": 50, "obtainedMarks": 0, "status": "pending", "parts": [ { "id", "key", "name", "totalMarks", "obtainedMarks", "status" } ] }`
+Body: `{ "answers": { "<taskId>": "text the student typed" } }`. An empty body
+(or one with no answers) is accepted and simply scores 0. The older
+`{ "parts": { <partId>: { "answers": {...} } } }` shape is still read, so an
+older client keeps working. Non-string values are ignored.
 
-Automatic per-task marking is not implemented yet, so every part is reported as
-`pending` - the same state the Results page displays.
+`200` →
+
+```json
+{
+  "message": "Exam submitted successfully. …",
+  "submittedAt": "...",
+  "totalMarks": 50,
+  "obtainedMarks": 9,
+  "autoObtainedMarks": 9,
+  "autoTotalMarks": 10,
+  "manualMarks": 40,
+  "percentage": 90,
+  "status": "pending-review",
+  "parts": [{
+    "id": "email", "key": "E", "name": "Email",
+    "totalMarks": 5, "obtainedMarks": 4,
+    "autoObtainedMarks": 4, "autoTotalMarks": 5, "manualMarks": 0,
+    "status": "marked",
+    "questions": [{
+      "id": "e-q1", "label": "Question 1", "title": "…",
+      "totalMarks": 5, "obtainedMarks": 4, "status": "marked",
+      "tasks": [{ "id": "e2-subject", "label": "…", "marks": 1,
+                  "obtainedMarks": 1, "grading": "exact",
+                  "status": "correct", "feedback": "Correct." }]
+    }]
+  }]
+}
+```
+
+#### How marking works
+
+Each task in `services/examPaper.js` declares how it is graded:
+
+| `grading` | Behaviour |
+|---|---|
+| `exact` | The typed answer is compared against `accepted[]`, ignoring case, extra spaces, smart quotes and trailing punctuation. |
+| `keywords` | Every entry in `keywords[]` that appears in the answer earns a proportional share of the task's marks (`4/6` keywords on a 4-mark task → 2.67). |
+| `manual` | Practical work (fonts, alignment, charts, slides) that the API cannot observe. |
+
+Anything not tagged defaults to `manual`. Task `status` is one of `correct`,
+`partial`, `incorrect`, `manual-review` or `not-attempted`.
+
+**Why `manualMarks` is separate.** This is a 50-mark practical and the written
+answers are only 10 of those marks. Scoring the unseen practical work as zero
+would badly misrepresent a student, so those marks are reported as *awaiting an
+examiner* and the result stays `pending-review` until they are entered.
+`autoTotalMarks + manualMarks` always equals the paper total (50).
+
+### `GET /api/exam/result` 🔒
+
+The signed-in student's most recent graded attempt, so the results page still
+shows real marks after a refresh.
+
+`200` → `{ "result": { …same shape as the submit response… } }`
+`404` → no attempt submitted yet (the page then shows a "start the exam" state)
 
 ### `GET /api/health`
 
