@@ -34,28 +34,49 @@ npm run dev                   # http://localhost:3000/api
 
 ### Using PostgreSQL (per the project plan)
 
-```
+Every connection detail lives in `backend/.env` — the backend reads it through
+dotenv in `config/env.js`, so **no host, port, name, user or password is
+hardcoded in the source**. Set them in `.env` and flip the dialect:
+
+```ini
+# backend/.env
 DB_DIALECT=postgres
-DATABASE_URL=postgres://pracoffice:secret@localhost:5432/pracoffice
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=pracoffice
+DB_USER=postgres
+DB_PASSWORD=secret
+DB_SSL=false
 ```
 
-or, with separate variables: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-(and `DB_SSL=true` for managed hosts). `sequelize.sync()` creates the missing
-tables on boot, and the configured database itself is created automatically the
-first time the backend connects when it does not exist yet (best effort — the
-PostgreSQL role needs `CREATEDB`).
+A single `DATABASE_URL=postgres://pracoffice:secret@localhost:5432/pracoffice`
+is also supported and takes precedence over the five variables above
+(`DB_SSL=true` for managed hosts such as Neon, Supabase or Render).
+
+`DB_PORT` must be an integer between 1 and 65535 — a typo fails immediately at
+boot instead of silently falling back to 5432. `sequelize.sync()` creates the
+missing tables on boot, and the configured database itself is created
+automatically the first time the backend connects when it does not exist yet
+(best effort — the PostgreSQL role needs `CREATEDB`).
+
+The values are logged on boot (password redacted), e.g.
+`[boot] ... db=postgres, target=postgres://postgres@localhost:5432/pracoffice`.
 
 ### Using the SQLite fallback (no server needed)
 
-```
+```ini
+# backend/.env
 DB_DIALECT=sqlite
 # DB_STORAGE=:memory:        # optional; defaults to backend/data/pracoffice.<env>.sqlite
 ```
 
-With no database variables at all the backend **automatically falls back to
-SQLite**, which is what happens during development and in the test suite.
-Production (`NODE_ENV=production`) always requires PostgreSQL and the boot fails
-otherwise.
+With `DB_DIALECT` empty the backend **automatically falls back to SQLite**
+whenever no PostgreSQL variable is present, which is what happens during
+development and in the test suite. Production (`NODE_ENV=production`) always
+requires PostgreSQL and the boot fails otherwise.
+
+`.env` is git-ignored, so keep credentials local; `.env.example` is the
+committed template and never holds real secrets.
 
 > **npm script note:** recent npm versions block package install scripts until
 > they are approved, so `sqlite3`'s native binding may not be compiled on a
@@ -102,9 +123,14 @@ backend/
 | `JWT_SECRET` | dev default | signing key, min 16 chars, **required** in production |
 | `JWT_EXPIRES_IN` | `7d` | token lifetime |
 | `BCRYPT_SALT_ROUNDS` | `10` | password hashing cost |
-| `DB_DIALECT` | auto | `postgres` or `sqlite` |
-| `DATABASE_URL` | – | PostgreSQL connection string (takes precedence) |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL` | – | PostgreSQL without a URL |
+| `DB_DIALECT` | `sqlite` | `postgres` or `sqlite` |
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5432` | PostgreSQL port, integer 1–65535 |
+| `DB_NAME` | `pracoffice` | PostgreSQL database (created on boot if missing) |
+| `DB_USER` | `postgres` | PostgreSQL user |
+| `DB_PASSWORD` | – | PostgreSQL password (keep it in `.env`, never in git) |
+| `DB_SSL` | `false` | required by managed hosts |
+| `DATABASE_URL` | – | connection string that overrides the five variables above |
 | `DB_STORAGE` | `data/pracoffice.<env>.sqlite` | SQLite file, or `:memory:` |
 | `DB_LOGGING` | `false` | log every SQL statement |
 | `DB_SYNC_ALTER` | `false` | run `sync({ alter: true })` on boot (development only) |

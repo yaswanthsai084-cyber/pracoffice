@@ -41,12 +41,28 @@ const call = async (path, { method = "GET", body, token } = {}) => {
     )
   }
 
-  const data = await response.json().catch(() => null)
+  // Read the body as text FIRST and only treat it as JSON when the response
+  // says so. A dead backend makes the Vite proxy answer with a plain-text 500,
+  // and `response.json()` would throw on it, leaving `data` null - which used
+  // to surface as a useless "Something went wrong" instead of the real cause.
+  const raw = await response.text().catch(() => "")
+  const contentType = response.headers.get("content-type") || ""
+  const data = contentType.includes("application/json") && raw !== ""
+    ? JSON.parse(raw)
+    : null
 
   if (!response.ok) {
+    // An error response that is not JSON never came from the API itself.
+    if (data === null) {
+      throw new ApiError(
+        `The backend is not responding (HTTP ${response.status}). Start it with ` +
+          `"npm run dev" in the backend folder, then try again.`,
+        { status: response.status }
+      )
+    }
     throw new ApiError(
-      (data && data.message) || "Something went wrong. Please try again.",
-      { status: response.status, errors: (data && data.errors) || [] }
+      data.message || "Something went wrong. Please try again.",
+      { status: response.status, errors: data.errors || [] }
     )
   }
 
