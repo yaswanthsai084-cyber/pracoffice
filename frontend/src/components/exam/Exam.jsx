@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import Header from "../common/Header"
 import Footer from "../common/Footer"
+import OfficeViewer from "./OfficeViewer"
 import { fetchExam, submitExam } from "../../services/examService"
 import "./exam.css"
 
@@ -377,7 +378,7 @@ function Exam() {
 
           </div>
 
-          {/* Simulated software section, below the question */}
+          {/* The real MS Office application for this part, shown in the page */}
           <div className="mt-6 flex min-h-[560px] flex-col overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-page px-4 py-3">
@@ -389,7 +390,8 @@ function Exam() {
               </div>
 
               <p className="text-xs font-semibold text-text-secondary">
-                Simulated {activePart.name} application
+                {activePart.name}
+                {activeLink ? ` · ${activeLink.label}` : ""}
               </p>
 
               <span className="text-xs text-text-muted">
@@ -398,37 +400,11 @@ function Exam() {
 
             </div>
 
-            <div className="flex flex-1 items-center justify-center p-8">
-
-              <div className="max-w-md text-center">
-
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-light text-xl font-bold text-brand">
-                  {activePart.name.charAt(0)}
-                </div>
-
-                <h3 className="mt-5 text-xl font-bold text-text-primary">
-                  {activePart.name} workspace
-                </h3>
-
-                {activeLink ? (
-                  <a
-                    href={activeLink.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition hover:-translate-y-0.5 hover:bg-brand-dark"
-                  >
-                    {activeLink.label}
-                    <span aria-hidden="true">↗</span>
-                  </a>
-                ) : (
-                  <p className="mt-5 text-sm font-medium text-text-secondary">
-                    Continue completing this question in the workspace provided.
-                  </p>
-                )}
-
-              </div>
-
-            </div>
+            <OfficeViewer
+              part={activePart}
+              partLetter={partLetter(activePart, activeIndex)}
+              questionLabel={activeQuestion.label}
+            />
 
           </div>
 

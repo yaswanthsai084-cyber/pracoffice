@@ -51,7 +51,7 @@ function Results() {
   if (loading) {
     return (
       <div className="results-page flex min-h-screen flex-col bg-page">
-        <Header />
+        <Header fullWidth />
         <main className="flex flex-1 items-center justify-center px-4 py-16">
           <div className="text-center">
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-brand-light border-t-brand" />
@@ -60,7 +60,7 @@ function Results() {
             </p>
           </div>
         </main>
-        <Footer />
+        <Footer fullWidth />
       </div>
     )
   }
@@ -68,13 +68,13 @@ function Results() {
   if (error) {
     return (
       <div className="results-page flex min-h-screen flex-col bg-page">
-        <Header />
+        <Header fullWidth />
         <main className="flex flex-1 items-center justify-center px-4 py-16">
           <p className="rounded-xl bg-error/10 px-5 py-4 text-sm font-medium text-error">
             {error}
           </p>
         </main>
-        <Footer />
+        <Footer fullWidth />
       </div>
     )
   }
@@ -82,7 +82,7 @@ function Results() {
   if (!result) {
     return (
       <div className="results-page flex min-h-screen flex-col bg-page">
-        <Header />
+        <Header fullWidth />
         <main className="flex flex-1 items-center justify-center px-4 py-16">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-text-primary">No result yet</h1>
@@ -97,7 +97,7 @@ function Results() {
             </Link>
           </div>
         </main>
-        <Footer />
+        <Footer fullWidth />
       </div>
     )
   }
@@ -114,11 +114,12 @@ function Results() {
   return (
     <div className="results-page flex min-h-screen flex-col bg-page">
 
-      <Header />
+      <Header fullWidth />
 
-      <main className="flex-1">
+      <main className="flex flex-1 flex-col">
 
-        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+        <section className="w-full px-4 py-12 sm:px-6 lg:px-8">
+
 
           {/* Result summary */}
           <div className="rounded-3xl bg-surface p-8 text-center shadow-sm ring-1 ring-border sm:p-10">
@@ -169,12 +170,12 @@ function Results() {
               Performance by Part
             </h2>
 
-            <div className="mt-5 overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
+            <div className="mt-5 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
 
               {parts.map((part) => (
                 <div
                   key={part.id}
-                  className="border-b border-border p-5 last:border-b-0"
+                  className="rounded-2xl bg-surface p-5 shadow-sm ring-1 ring-border"
                 >
 
                   <div className="flex items-center justify-between gap-4">
@@ -253,7 +254,7 @@ function Results() {
 
       </main>
 
-      <Footer />
+      <Footer fullWidth />
 
     </div>
   )

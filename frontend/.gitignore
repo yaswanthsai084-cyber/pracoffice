@@ -1,2 +1,6 @@
 node_modules/
 dist/
+
+# Local env: holds the practice-document URLs. .env.example is committed.
+.env
+.env.local
