@@ -157,6 +157,39 @@ const config = {
     saltRounds: toInt(process.env.BCRYPT_SALT_ROUNDS, 10),
   },
 
+  /*
+   * ONLYOFFICE Docs: the document server that provides the Word / Excel /
+   * PowerPoint editors inside the exam.
+   *
+   * Entirely optional. With `enabled: false` - the default - nothing here is
+   * used, the frontend falls back to its built-in editor, and every practical
+   * task is marked by an examiner. An absent document server must never stop
+   * the API from booting.
+   *
+   * Two URLs are needed because the document server calls back into this API:
+   *
+   *   publicUrl   - how the BROWSER reaches the document server, and where it
+   *                 loads api.js from.
+   *   internalUrl - how the DOCUMENT SERVER reaches this API, to download the
+   *                 source file and post the saved copy back. Inside Docker
+   *                 Compose that is the service name, because "localhost"
+   *                 inside the office container is the container itself.
+   */
+  office: {
+    enabled: toBool(process.env.OFFICE_ENABLED, false),
+    publicUrl: (process.env.OFFICE_PUBLIC_URL || 'http://localhost:8080').replace(/\/+$/, ''),
+    internalUrl: (process.env.OFFICE_INTERNAL_URL || '').replace(/\/+$/, ''),
+    // Must match the document server's JWT_SECRET, or every config and callback
+    // is rejected as an invalid token.
+    jwtEnabled: toBool(process.env.OFFICE_JWT_ENABLED, true),
+    jwtSecret:
+      process.env.OFFICE_JWT_SECRET ||
+      process.env.JWT_SECRET ||
+      'pracoffice-office-development-secret',
+    // Where each student's working copies live. Defaults under backend/data.
+    storageDir: process.env.OFFICE_STORAGE_DIR || path.join(BACKEND_ROOT, 'data', 'office'),
+  },
+
   db: {
     dialect,
     logging: toBool(process.env.DB_LOGGING, false),

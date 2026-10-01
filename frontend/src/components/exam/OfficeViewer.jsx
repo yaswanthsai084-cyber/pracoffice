@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import WordWorkspace from "./WordWorkspace"
+import OnlyOfficeEditor from "./OnlyOfficeEditor"
 import { buildOfficeEmbedUrl, isEmbeddableDocumentUrl } from "../../services/examLinks"
 
 /** Parts that get a built-in editor when real Office cannot be embedded. */
 const LOCAL_EDITORS = ["word", "excel", "powerpoint"]
+
+/** The exam part name that maps to each editor part. */
+const OFFICE_PART_IDS = { word: "word", excel: "excel", powerpoint: "powerpoint" }
 
 /** Shown for parts that have neither a document nor an editor (Access, Email). */
 function WorkspacePlaceholder({ name }) {
@@ -25,24 +29,46 @@ function WorkspacePlaceholder({ name }) {
 /**
  * Shows the document for an exam part directly on the exam page.
  *
- * Real Microsoft Word / Excel / PowerPoint is preferred, via Microsoft's Office
- * Online viewer. When the configured link is an "open in the app" deep link it
- * is sign-in protected, so the viewer would only ever show Microsoft's "file not
- * found / not publicly accessible" error. In that case the part's editor is
- * rendered instead, so the student is never left with a broken frame.
+ * Three renderers are tried in order, and each one falls through to the next:
  *
- * The viewer is cross-origin, so a refusal to frame it is invisible to us: the
- * parent page only receives a `load` event. A loading veil is therefore lifted
- * on the first event and after a grace period, and a discreet "open in Word"
- * link is kept as an escape hatch.
+ *   1. **ONLYOFFICE Docs** (`OnlyOfficeEditor`) - the real Word / Excel /
+ *      PowerPoint editor. It needs the document server, so the backend may
+ *      report it as unavailable.
+ *   2. **Microsoft's Office Online viewer** - a web view, but only for a
+ *      publicly shared document. A sign-in protected "open in the app" deep
+ *      link always shows Microsoft's "not publicly accessible" error, so the
+ *      next fallback is used instead.
+ *   3. **The built-in editor** (`WordWorkspace`) - always available, so the
+ *      exam is never left without somewhere to work.
+ *
+ * The fallbacks matter: an exam must never break because a container is down.
  */
-function OfficeViewer({ part, partLetter, questionLabel }) {
+function OfficeViewer({ part, partLetter, questionLabel, onOnlyOfficeUnavailable }) {
   const documentUrl = part?.link?.url
   const embedUrl = buildOfficeEmbedUrl(documentUrl)
 
+  const [officeUnavailable, setOfficeUnavailable] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [timedOut, setTimedOut] = useState(false)
 
+  // The parent is told ONLYOFFICE is down exactly once per part, through a
+  // stable callback, so Rules-of-Hooks linting and react-refresh stay quiet.
+  const handleOnlyOfficeUnavailable = useCallback(
+    (reason) => {
+      setOfficeUnavailable(true)
+      onOnlyOfficeUnavailable?.(reason)
+    },
+    [onOnlyOfficeUnavailable]
+  )
+
+  const partName = String(part?.name || "").trim().toLowerCase()
+  const officePartId = OFFICE_PART_IDS[partName] || null
+  // Once ONLYOFFICE has reported itself unavailable for this part, the
+  // component stays on the cheaper renderers rather than retrying on every
+  // re-render.
+  const canUseOnlyOffice = Boolean(officePartId) && !officeUnavailable
+
+  // A new document link restarts the loading veil.
   useEffect(() => {
     if (!embedUrl) return undefined
 
@@ -56,12 +82,27 @@ function OfficeViewer({ part, partLetter, questionLabel }) {
     return () => clearTimeout(timer)
   }, [embedUrl])
 
+  // Reset the "unavailable" latch when the student moves to another part.
+  useEffect(() => {
+    setOfficeUnavailable(false)
+  }, [partName])
+
+  // ONLYOFFICE handles its own loading and error states.
+  if (canUseOnlyOffice) {
+    return (
+      <OnlyOfficeEditor
+        key={partName}
+        partId={officePartId}
+        partName={part?.name}
+        onUnavailable={handleOnlyOfficeUnavailable}
+      />
+    )
+  }
+
   // No document configured for this part (MS Access / Email).
   if (!documentUrl) return <WorkspacePlaceholder name={part?.name} />
 
-  const hasEditor = LOCAL_EDITORS.includes(
-    String(part?.name || "").trim().toLowerCase()
-  )
+  const hasEditor = LOCAL_EDITORS.includes(partName)
 
   // A sign-in protected link: use the built-in editor rather than an error page.
   if (!isEmbeddableDocumentUrl(documentUrl)) {
