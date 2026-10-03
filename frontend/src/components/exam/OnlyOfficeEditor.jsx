@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { EDITOR_FRAME_CLASS } from "./editorFrame"
 
 /**
  * Embeds the real ONLYOFFICE editor for a Word / Excel / PowerPoint part.
@@ -57,6 +58,10 @@ const LOADING_COPY = {
 function OnlyOfficeEditor({ partId, partName, onUnavailable }) {
   const containerRef = useRef(null)
   const editorRef = useRef(null)
+  // Tracks whether the document itself loaded. An `onError` before that point
+  // means the student is looking at an error/preview frame rather than an
+  // editor, which is exactly the failure the fallback exists for.
+  const readyRef = useRef(false)
   const [status, setStatus] = useState("loading")
   const [error, setError] = useState("")
 
@@ -77,6 +82,7 @@ function OnlyOfficeEditor({ partId, partName, onUnavailable }) {
 
   useEffect(() => {
     let cancelled = false
+    readyRef.current = false
 
     const start = async () => {
       try {
@@ -110,7 +116,35 @@ function OnlyOfficeEditor({ partId, partName, onUnavailable }) {
           return
         }
 
-        const editor = new DocsAPI.DocEditor(containerRef.current.id, payload.config)
+        // `events` are client-side callbacks: they must NOT be part of the
+        // signed `config.token` the backend produced, so they are attached
+        // here at construction time, not inside the signed payload.
+        const editor = new DocsAPI.DocEditor(containerRef.current.id, {
+          ...payload.config,
+          events: {
+            onError: (event) => {
+              const message =
+                event?.data?.message ||
+                (typeof event?.data === "string" ? event.data : null) ||
+                "The document editor reported an error."
+              console.error("[onlyoffice] editor error:", event?.data || event)
+              // A failure before the document loads means the student is
+              // looking at an error/preview frame, not an editor. Hand off to
+              // the fallback (with retry for Excel / PowerPoint) instead of
+              // leaving that frame on screen. Errors after load are left
+              // alone: destroying a working session mid-exam would be worse.
+              if (!readyRef.current && !cancelled) {
+                setStatus("unavailable")
+                setError(message)
+                onUnavailable?.("editor-error")
+              }
+            },
+            onDocumentReady: () => {
+              readyRef.current = true
+              console.log(`[onlyoffice] ${partId} document ready`)
+            },
+          },
+        })
 
         editorRef.current = editor
         setStatus("ready")
@@ -132,11 +166,11 @@ function OnlyOfficeEditor({ partId, partName, onUnavailable }) {
   }, [partId, destroyEditor, onUnavailable])
 
   return (
-    <div className="relative flex-1 bg-white">
+    <div className="relative flex flex-1 flex-col min-h-0 bg-white">
       <div
         id={`onlyoffice-${partId}`}
         ref={containerRef}
-        className="h-full min-h-[520px] w-full"
+        className={EDITOR_FRAME_CLASS}
       />
 
       {status === "loading" && (

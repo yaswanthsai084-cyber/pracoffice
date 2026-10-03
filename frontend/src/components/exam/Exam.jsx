@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import Header from "../common/Header"
 import Footer from "../common/Footer"
 import OfficeViewer from "./OfficeViewer"
+import { EDITOR_PANEL_CLASS } from "./editorFrame"
 import { fetchExam, submitExam } from "../../services/examService"
 import "./exam.css"
 
@@ -379,7 +380,7 @@ function Exam() {
           </div>
 
           {/* The real MS Office application for this part, shown in the page */}
-          <div className="mt-6 flex min-h-[560px] flex-col overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
+          <div className={`mt-6 ${EDITOR_PANEL_CLASS}`}>
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-page px-4 py-3">
 

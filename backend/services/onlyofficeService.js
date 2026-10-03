@@ -51,6 +51,114 @@ const PART_TITLES = {
   powerpoint: 'Part C - PowerPoint',
 };
 
+/**
+ * The `document.key` currently open for each student/part.
+ *
+ * The content-derived key on disk cannot identify the live editing session: it
+ * changes as soon as the first callback writes new bytes. This in-memory map is
+ * set when a signed config is handed out and is what the `forcesave` command
+ * targets.
+ */
+const activeEditorKeys = new Map();
+
+/** Timestamp of the last callback that actually wrote bytes for a part. */
+const lastSavedAt = new Map();
+
+const editorSessionId = (userId, partId) => `${userId}:${String(partId).toLowerCase()}`;
+
+const rememberActiveEditor = (userId, partId, key) => {
+  activeEditorKeys.set(editorSessionId(userId, partId), key);
+};
+
+const getActiveEditorKey = (userId, partId) =>
+  activeEditorKeys.get(editorSessionId(userId, partId)) || null;
+
+const forgetActiveEditor = (userId, partId) => {
+  activeEditorKeys.delete(editorSessionId(userId, partId));
+};
+
+const markSaved = (userId, partId) => {
+  lastSavedAt.set(editorSessionId(userId, partId), Date.now());
+};
+
+const savedAt = (userId, partId) => lastSavedAt.get(editorSessionId(userId, partId)) || 0;
+
+/** How long a forced save may take to reach the callback. */
+const SAVE_POLL_TIMEOUT_MS = 15000;
+
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+/**
+ * Asks ONLYOFFICE to flush the current editor session to the callback URL.
+ *
+ * `Next` must not silently discard unsaved typing, and submit cannot grade bytes
+ * that the document server has not posted back yet. The command service is
+ * server-to-server here; when it is unavailable the caller still gets an
+ * actionable error instead of pretending the save succeeded.
+ */
+const forceSaveActiveDocument = async (userId, partId) => {
+  const part = String(partId).toLowerCase();
+
+  if (!isEditablePart(part)) {
+    return { saved: false, reason: 'unsupported' };
+  }
+
+  const key = getActiveEditorKey(userId, part);
+
+  if (!key) {
+    return { saved: false, reason: 'not-open' };
+  }
+
+  const startedAt = savedAt(userId, part);
+  const command = { c: 'forcesave', key, userdata: JSON.stringify({ userId, part }) };
+
+  if (config.office.jwtEnabled) {
+    command.token = signToken(command);
+  }
+
+  const endpoint = `${config.office.commandUrl}/coauthoring/CommandService.ashx`;
+  let response;
+
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(command),
+    });
+  } catch (error) {
+    throw new Error(`The document server command service could not be reached: ${error.message}`);
+  }
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok || !payload || Number(payload.error) !== 0) {
+    const code = payload && payload.error !== undefined ? payload.error : response.status;
+    throw new Error(`The document server refused the save request (error ${code}).`);
+  }
+
+  // The command is accepted asynchronously. Wait until either a callback lands
+  // or the existing bytes change, whichever the document server chooses.
+  const deadline = Date.now() + SAVE_POLL_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    if (savedAt(userId, part) > startedAt) {
+      return { saved: true, key, waitedMs: SAVE_POLL_TIMEOUT_MS - (deadline - Date.now()) };
+    }
+
+    const document = await readDocument(userId, part);
+
+    if (document && documentKey(userId, part, document) !== key) {
+      // Bytes changed under the original key, but the callback notification has
+      // not arrived yet. The file is usable for evaluation either way.
+      return { saved: true, key, waitedMs: SAVE_POLL_TIMEOUT_MS - (deadline - Date.now()) };
+    }
+
+    await sleep(250);
+  }
+
+  return { saved: false, reason: 'timeout', key };
+};
+
 /** True when the integration is switched on. */
 const isEnabled = () => config.office.enabled === true;
 
@@ -191,6 +299,7 @@ const saveDocument = async (userId, partId, buffer) => {
   const temporary = `${target}.part`;
   await fsp.writeFile(temporary, buffer);
   await fsp.rename(temporary, target);
+  markSaved(userId, partId);
 
   return true;
 };
@@ -221,7 +330,7 @@ const deleteDocument = async (userId, partId) => {
  * @param {string} partId 'word' | 'excel' | 'powerpoint'
  * @returns {Promise<object|null>} the editor config, or null when unavailable
  */
-const buildEditorConfig = async (userId, partId) => {
+const buildEditorConfig = async (userId, partId, user = null) => {
   const part = String(partId).toLowerCase();
   const types = PART_TYPES[part];
 
@@ -238,6 +347,9 @@ const buildEditorConfig = async (userId, partId) => {
   // Derived from the current bytes, so an edited file always produces a new key
   // and ONLYOFFICE never serves a stale cached copy.
   const key = documentKey(userId, part, document.buffer);
+  // Remember the live editing session so `Next`/`Submit` can force-save the
+  // exact key the document server has open.
+  rememberActiveEditor(userId, part, key);
   // The document server does not add anything to `document.url`, so the token
   // protecting that download has to travel inside the URL itself. Signing just
   // the key (rather than the whole config) keeps the grant narrow: it can only
@@ -246,14 +358,22 @@ const buildEditorConfig = async (userId, partId) => {
     ? `&token=${encodeURIComponent(signToken({ key }))}`
     : '';
 
+  // Signed as `user.id` (string) + `user.name`: the document server requires a
+  // user identity for `mode: edit` and rejects the config as "security token
+  // is not correctly formed" when it is absent.
+  const displayName =
+    (user && (user.name || user.username || user.email)) || `Student ${userId}`;
+
   const base = {
     documentType: types.documentType,
-    // Embedded rather than a full-screen takeover: the student must still reach
-    // the question panel and the submit button.
-    type: 'embedded',
+    // `desktop` renders the complete editor chrome (ribbon/tabs/grid/canvas)
+    // inside the page frame. The `embedded` type is meant to be paired with an
+    // `editorConfig.embedded` section (toolbar docking, save/share URLs); used
+    // bare, as ours was, the frame can render with a reduced UI that reads as
+    // "preview, no edit option".
+    type: 'desktop',
     width: '100%',
     height: '100%',
-    title: `${PART_TITLES[part] || part} (${fileName})`,
     document: {
       fileType: types.fileType,
       key,
@@ -261,17 +381,28 @@ const buildEditorConfig = async (userId, partId) => {
       url: `${internalBase}/api/office/file?userId=${userId}&part=${part}&key=${key}${fileToken}`,
       permissions: {
         edit: true,
+        // Stated explicitly so grid, control, form and filter editing are on
+        // for spreadsheets and slides, rather than left to server defaults.
+        comment: true,
+        review: true,
+        fillForms: true,
+        modifyContentControl: true,
+        modifyFilter: true,
+        copy: true,
         // Downloading and printing are off: this is a supervised test and the
         // submitted file is the only copy that counts.
         download: false,
         print: false,
-        copy: true,
       },
     },
     editorConfig: {
       mode: 'edit',
       lang: 'en',
       callbackUrl: `${internalBase}/api/office/callback?userId=${userId}&part=${part}&key=${key}`,
+      user: {
+        id: String(userId),
+        name: String(displayName).slice(0, 128),
+      },
       // Co-editing is pointless for a one-student exam and would let a second
       // connection open the same cached document.
       coEditing: { mode: 'strict', change: false },
@@ -325,6 +456,9 @@ module.exports = {
   readDocument,
   saveDocument,
   deleteDocument,
+  forceSaveActiveDocument,
+  rememberActiveEditor,
+  markSaved,
   buildEditorConfig,
   downloadFromUrl,
 };

@@ -179,6 +179,10 @@ const config = {
     enabled: toBool(process.env.OFFICE_ENABLED, false),
     publicUrl: (process.env.OFFICE_PUBLIC_URL || 'http://localhost:8080').replace(/\/+$/, ''),
     internalUrl: (process.env.OFFICE_INTERNAL_URL || '').replace(/\/+$/, ''),
+    // Command service used for explicit `forcesave` checkpoints (Next / submit).
+    // Defaults to the public URL for host-local development; Compose overrides
+    // it with the service name because localhost inside backend is backend.
+    commandUrl: (process.env.OFFICE_COMMAND_URL || process.env.OFFICE_PUBLIC_URL || 'http://localhost:8080').replace(/\/+$/, ''),
     // Must match the document server's JWT_SECRET, or every config and callback
     // is rejected as an invalid token.
     jwtEnabled: toBool(process.env.OFFICE_JWT_ENABLED, true),

@@ -172,8 +172,10 @@ test('buildEditorConfig returns a signed config the document server can use', as
     assert.equal(editor.documentType, 'word');
     assert.equal(editor.document.fileType, 'docx');
     assert.equal(editor.editorConfig.mode, 'edit');
-    // Embedded, so the question panel and submit button stay reachable.
-    assert.equal(editor.type, 'embedded');
+    // Full editor chrome inside the page. The `embedded` platform type is meant
+    // to be paired with an `editorConfig.embedded` section (docked toolbar,
+    // save/share URLs); used bare, the frame renders a reduced UI.
+    assert.equal(editor.type, 'desktop');
 
     // document.url and callbackUrl are what the DOCUMENT server fetches, so they
     // must be absolute and point back at this API.
@@ -185,6 +187,9 @@ test('buildEditorConfig returns a signed config the document server can use', as
 
     // The student can edit, but cannot take the file out of the exam.
     assert.equal(editor.document.permissions.edit, true);
+    assert.equal(editor.document.permissions.modifyFilter, true);
+    assert.equal(editor.document.permissions.modifyContentControl, true);
+    assert.equal(editor.document.permissions.fillForms, true);
     assert.equal(editor.document.permissions.download, false);
     assert.equal(editor.document.permissions.print, false);
 

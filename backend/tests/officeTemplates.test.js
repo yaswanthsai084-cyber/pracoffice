@@ -60,10 +60,98 @@ test('blankPptx is a readable presentation with one slide', () => {
     '[Content_Types].xml',
     'ppt/presentation.xml',
     'ppt/slides/slide1.xml',
+    // A presentation is a chain: slide -> layout -> master -> theme. Without
+    // all four the document server opens the package and then fails with
+    // "an error occurred while opening the file".
+    'ppt/slideLayouts/slideLayout1.xml',
+    'ppt/slideMasters/slideMaster1.xml',
+    'ppt/theme/theme1.xml',
   ]);
 
   assert.match(readPartText(parts, 'ppt/presentation.xml'), /sldIdLst/);
   assert.match(readPartText(parts, 'ppt/_rels/presentation.xml.rels'), /slides\/slide1\.xml/);
+});
+
+/**
+ * Every reference in the presentation package must resolve.
+ *
+ * A dangling reference is invisible in the XML - the package lists fine - and
+ * only appears as a document the editor refuses to open, so it is checked here
+ * rather than discovered in the browser. An earlier version of this template
+ * pointed `sldMasterId` at the theme's `rId`, which is exactly what this
+ * catches.
+ */
+test('blankPptx references resolve: rels targets and rIds are all real', () => {
+  const parts = readOfficeParts(blankPptx());
+  assert.ok(parts, 'the presentation must be readable');
+
+  // A relative Target is resolved against the folder of the part that owns the
+  // rels file, then any "x/../" is collapsed.
+  const resolveTarget = (base, target) => {
+    const joined = target.startsWith('/')
+      ? target.slice(1)
+      : base
+        ? `${base}/${target}`
+        : target;
+    return joined.replace(/[^/]+\/\.\.\//g, '');
+  };
+
+  /** `ppt/slides/_rels/slide1.xml.rels` -> `ppt/slides`; root `_rels/.rels` -> ''. */
+  const baseOfRels = (relsName) => {
+    const marker = relsName.indexOf('/_rels/');
+    return marker === -1 ? '' : relsName.slice(0, marker);
+  };
+
+  const relsParts = [...parts.keys()].filter((name) => name.endsWith('.rels'));
+  assert.ok(
+    relsParts.length >= 5,
+    `expected the slide, layout, master and presentation rels parts, found ${relsParts.length}`
+  );
+
+  // Direction 1: every declared Target names a part that is really in the ZIP.
+  for (const relsName of relsParts) {
+    const base = baseOfRels(relsName);
+
+    for (const [, target] of readPartText(parts, relsName).matchAll(/Target="([^"]+)"/g)) {
+      const resolved = resolveTarget(base, target);
+      assert.ok(parts.has(resolved), `${relsName} targets missing part "${resolved}"`);
+    }
+  }
+
+  // Direction 2: every r:id a part uses is declared in that part's own rels.
+  const relsPathFor = (part) => {
+    const slash = part.lastIndexOf('/');
+    return `${part.slice(0, slash)}/_rels/${part.slice(slash + 1)}.rels`;
+  };
+
+  let idsChecked = 0;
+
+  for (const [name, contents] of parts) {
+    if (name.endsWith('.rels') || !name.endsWith('.xml')) continue;
+
+    const ids = [...contents.toString('utf8').matchAll(/r:id="([^"]+)"/g)].map((m) => m[1]);
+    if (ids.length === 0) continue;
+
+    const rels = readPartText(parts, relsPathFor(name));
+    assert.ok(rels, `${name} uses rIds but ${relsPathFor(name)} is missing`);
+
+    const declared = new Set([...rels.matchAll(/Id="([^"]+)"/g)].map((m) => m[1]));
+
+    for (const id of ids) {
+      assert.ok(declared.has(id), `${name} references ${id}, undeclared in ${relsPathFor(name)}`);
+      idsChecked += 1;
+    }
+  }
+
+  // Guard against the loop silently finding nothing to verify.
+  assert.ok(idsChecked >= 3, `expected the cross-part references to be checked, saw ${idsChecked}`);
+
+  // The spec requirement whose absence broke the template: a slide must name a
+  // slide layout, which is what makes the master and theme reachable.
+  assert.match(
+    readPartText(parts, 'ppt/slides/_rels/slide1.xml.rels'),
+    /slideLayouts\/slideLayout1\.xml/
+  );
 });
 
 test('each template is a distinct shape, so a file type never gets the wrong file', () => {

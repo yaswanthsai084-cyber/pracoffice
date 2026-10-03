@@ -92,8 +92,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
       # Switch the real editors on once the document server is healthy.
       OFFICE_ENABLED: "true"
-      # The BROWSER loads api.js from here...
+      # How the BROWSER loads api.js...
       OFFICE_PUBLIC_URL: ${OFFICE_PUBLIC_URL:-http://localhost:8080}
+      # ...and how this API asks the document server to force a save.
+      OFFICE_COMMAND_URL: http://onlyoffice
       # ...but the document server reaches the API by service name: "localhost"
       # inside the onlyoffice container would be the container itself.
       OFFICE_INTERNAL_URL: http://backend:3000

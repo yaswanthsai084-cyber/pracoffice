@@ -81,7 +81,7 @@ const getConfig = asyncHandler(async (req, res) => {
     throw AppError.notFound(`No editor for part "${partId}".`);
   }
 
-  const editorConfig = await officeService.buildEditorConfig(req.user.id, partId);
+  const editorConfig = await officeService.buildEditorConfig(req.user.id, partId, req.user);
 
   if (!editorConfig) {
     return res.status(200).json({ available: false, reason: 'unavailable' });
