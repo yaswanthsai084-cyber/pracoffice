@@ -33,7 +33,10 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-pracoffice}
     ports:
-      - "5432:5432"
+      # 5433 on the host so a locally installed PostgreSQL (which also claims
+      # 5432) does not clash. Inside the network the backend still connects to
+      # postgres:5432.
+      - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -108,7 +111,10 @@ services:
       - office-data:/app/data/office
       - ./backend:/app
       - /app/node_modules
-    command: npm run dev
+    # The image is built with prod deps only (see backend/Dockerfile), so
+    # nodemon has to be installed here before `npm run dev` can use it. Mirrors
+    # the frontend service below.
+    command: sh -c "npm install && npm run dev"
 
   frontend:
     image: node:22-alpine
