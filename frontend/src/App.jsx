@@ -5,6 +5,7 @@ import Registration from "./pages/Registration"
 import Exam from "./components/exam/Exam"
 import ExamInstructions from "./pages/ExamInstructions"
 import Results from "./components/results/Results"
+import OfficeTest from "./pages/OfficeTest"
 import RequireAuth from "./components/common/RequireAuth"
 function App() {
   return (
@@ -19,7 +20,8 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />  
         <Route path="/exam/instructions" element={<RequireAuth><ExamInstructions/></RequireAuth>} />
         <Route path="/exam" element={<RequireAuth><Exam/></RequireAuth>} />
-        <Route path="/results" element={<RequireAuth><Results/></RequireAuth>}/>         
+        <Route path="/results" element={<RequireAuth><Results/></RequireAuth>}/>
+        <Route path="/office-test" element={<RequireAuth><OfficeTest/></RequireAuth>} />         
          </Routes>
     </BrowserRouter>
   )

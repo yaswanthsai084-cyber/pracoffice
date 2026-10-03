@@ -1,50 +1,125 @@
+import { useEffect, useState } from "react"
 import Header from "../common/Header"
 import Footer from "../common/Footer"
 import { Link } from "react-router-dom"
+import { fetchResult } from "../../services/examService"
 import "./results.css"
 
+/** Per-task status -> the badge colour and label shown next to a task. */
+const STATUS_STYLES = {
+  correct: "bg-success/10 text-success",
+  partial: "bg-highlight/10 text-highlight",
+  incorrect: "bg-error/10 text-error",
+  "manual-review": "bg-text-muted/10 text-text-secondary",
+  "not-attempted": "bg-text-muted/10 text-text-muted",
+}
+
+const STATUS_LABELS = {
+  correct: "Correct",
+  partial: "Partly correct",
+  incorrect: "Incorrect",
+  "manual-review": "Awaiting examiner",
+  "not-attempted": "Not attempted",
+}
+
 function Results() {
-  const results = [
-    {
-      part: "Word",
-      score: 0,
-      total: 0,
-      status: "Pending",
-    },
-    {
-      part: "Excel",
-      score: 0,
-      total: 0,
-      status: "Pending",
-    },
-    {
-      part: "PowerPoint",
-      score: 0,
-      total: 0,
-      status: "Pending",
-    },
-    {
-      part: "Access",
-      score: 0,
-      total: 0,
-      status: "Pending",
-    },
-    {
-      part: "Email",
-      score: 0,
-      total: 0,
-      status: "Pending",
-    },
-  ]
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  // The result is read from the API, not from router state, so refreshing the
+  // page (or opening /results directly) still shows the graded marks.
+  useEffect(() => {
+    let cancelled = false
+
+    fetchResult()
+      .then((data) => {
+        if (!cancelled) setResult(data)
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(requestError.message)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="results-page flex min-h-screen flex-col bg-page">
+        <Header fullWidth />
+        <main className="flex flex-1 items-center justify-center px-4 py-16">
+          <div className="text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-brand-light border-t-brand" />
+            <p className="mt-4 text-sm font-medium text-text-secondary">
+              Loading your result...
+            </p>
+          </div>
+        </main>
+        <Footer fullWidth />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="results-page flex min-h-screen flex-col bg-page">
+        <Header fullWidth />
+        <main className="flex flex-1 items-center justify-center px-4 py-16">
+          <p className="rounded-xl bg-error/10 px-5 py-4 text-sm font-medium text-error">
+            {error}
+          </p>
+        </main>
+        <Footer fullWidth />
+      </div>
+    )
+  }
+
+  if (!result) {
+    return (
+      <div className="results-page flex min-h-screen flex-col bg-page">
+        <Header fullWidth />
+        <main className="flex flex-1 items-center justify-center px-4 py-16">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-text-primary">No result yet</h1>
+            <p className="mt-2 text-sm text-text-secondary">
+              You have not submitted an exam yet. Attempt the paper to see your marks.
+            </p>
+            <Link
+              to="/exam"
+              className="mt-6 inline-flex rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/20 hover:bg-brand-dark"
+            >
+              Start the exam
+            </Link>
+          </div>
+        </main>
+        <Footer fullWidth />
+      </div>
+    )
+  }
+
+  const {
+    parts = [],
+    obtainedMarks,
+    totalMarks,
+    autoObtainedMarks,
+    autoTotalMarks,
+    manualMarks,
+  } = result
 
   return (
     <div className="results-page flex min-h-screen flex-col bg-page">
 
-      <Header />
+      <Header fullWidth />
 
-      <main className="flex-1">
+      <main className="flex flex-1 flex-col">
 
-        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+        <section className="w-full px-4 py-12 sm:px-6 lg:px-8">
+
 
           {/* Result summary */}
           <div className="rounded-3xl bg-surface p-8 text-center shadow-sm ring-1 ring-border sm:p-10">
@@ -58,18 +133,30 @@ function Results() {
             </h1>
 
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-text-secondary">
-              Your performance has been evaluated based on the practical
-              tasks completed during the assessment.
+              Your written answers were marked automatically. The practical tasks
+              (formatting, charts and slides) are marked separately by an examiner.
             </p>
 
             <div className="results-score mx-auto mt-8 flex h-32 w-32 flex-col items-center justify-center rounded-full bg-brand-light">
 
               <span className="text-3xl font-bold text-brand">
-                --
+                {obtainedMarks}
               </span>
 
               <span className="text-xs text-text-secondary">
-                Total Score
+                out of {totalMarks} marks
+              </span>
+
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm">
+
+              <span className="rounded-full bg-brand-light px-4 py-2 font-semibold text-brand">
+                Written answers: {autoObtainedMarks} / {autoTotalMarks}
+              </span>
+
+              <span className="rounded-full bg-text-muted/10 px-4 py-2 font-semibold text-text-secondary">
+                Awaiting examiner: {manualMarks} marks
               </span>
 
             </div>
@@ -83,48 +170,71 @@ function Results() {
               Performance by Part
             </h2>
 
-            <div className="mt-5 overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
+            <div className="mt-5 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
 
-              {results.map((result) => (
+              {parts.map((part) => (
                 <div
-                  key={result.part}
-                  className="flex items-center justify-between border-b border-border p-5 last:border-b-0"
+                  key={part.id}
+                  className="rounded-2xl bg-surface p-5 shadow-sm ring-1 ring-border"
                 >
 
-                  <div>
-                    <h3 className="font-semibold text-text-primary">
-                      {result.part}
-                    </h3>
+                  <div className="flex items-center justify-between gap-4">
 
-                    <p className="mt-1 text-sm text-text-secondary">
-                      {result.status}
-                    </p>
+                    <div>
+                      <h3 className="font-semibold text-text-primary">
+                        Part {part.key} · {part.name}
+                      </h3>
+
+                      <p className="mt-1 text-sm text-text-secondary">
+                        {part.manualMarks > 0
+                          ? `Marked ${part.autoObtainedMarks} of ${part.autoTotalMarks} written · ${part.manualMarks} marks awaiting examiner`
+                          : `Marked ${part.obtainedMarks} of ${part.totalMarks}`}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="font-bold text-text-primary">
+                        {part.obtainedMarks} / {part.totalMarks}
+                      </p>
+                    </div>
+
                   </div>
 
-                  <div className="text-right">
-                    <p className="font-bold text-text-primary">
-                      {result.score} / {result.total}
-                    </p>
-                  </div>
+                  {/* Per-task detail, straight from the backend breakdown */}
+                  <ul className="mt-4 space-y-2">
+                    {(part.questions || []).flatMap((question) =>
+                      (question.tasks || []).map((task) => (
+                        <li
+                          key={task.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-page px-4 py-2.5"
+                        >
+                          <span className="text-sm text-text-secondary">
+                            {task.label}
+                          </span>
+
+                          <span className="flex items-center gap-3">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                STATUS_STYLES[task.status] ||
+                                STATUS_STYLES["not-attempted"]
+                              }`}
+                            >
+                              {STATUS_LABELS[task.status] || task.status}
+                            </span>
+
+                            <span className="w-16 text-right text-sm font-semibold text-text-primary">
+                              {task.obtainedMarks} / {task.marks}
+                            </span>
+                          </span>
+                        </li>
+                      ))
+                    )}
+                  </ul>
 
                 </div>
               ))}
 
             </div>
-
-          </div>
-
-          {/* Feedback */}
-          <div className="mt-10 rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-border">
-
-            <h2 className="text-xl font-bold text-text-primary">
-              Detailed Feedback
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-text-secondary">
-              Detailed per-element feedback will appear here after the
-              evaluation engine returns the assessment results.
-            </p>
 
           </div>
 
@@ -144,7 +254,7 @@ function Results() {
 
       </main>
 
-      <Footer />
+      <Footer fullWidth />
 
     </div>
   )

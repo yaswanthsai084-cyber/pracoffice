@@ -34,28 +34,49 @@ npm run dev                   # http://localhost:3000/api
 
 ### Using PostgreSQL (per the project plan)
 
-```
+Every connection detail lives in `backend/.env` — the backend reads it through
+dotenv in `config/env.js`, so **no host, port, name, user or password is
+hardcoded in the source**. Set them in `.env` and flip the dialect:
+
+```ini
+# backend/.env
 DB_DIALECT=postgres
-DATABASE_URL=postgres://pracoffice:secret@localhost:5432/pracoffice
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=pracoffice
+DB_USER=postgres
+DB_PASSWORD=secret
+DB_SSL=false
 ```
 
-or, with separate variables: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-(and `DB_SSL=true` for managed hosts). `sequelize.sync()` creates the missing
-tables on boot, and the configured database itself is created automatically the
-first time the backend connects when it does not exist yet (best effort — the
-PostgreSQL role needs `CREATEDB`).
+A single `DATABASE_URL=postgres://pracoffice:secret@localhost:5432/pracoffice`
+is also supported and takes precedence over the five variables above
+(`DB_SSL=true` for managed hosts such as Neon, Supabase or Render).
+
+`DB_PORT` must be an integer between 1 and 65535 — a typo fails immediately at
+boot instead of silently falling back to 5432. `sequelize.sync()` creates the
+missing tables on boot, and the configured database itself is created
+automatically the first time the backend connects when it does not exist yet
+(best effort — the PostgreSQL role needs `CREATEDB`).
+
+The values are logged on boot (password redacted), e.g.
+`[boot] ... db=postgres, target=postgres://postgres@localhost:5432/pracoffice`.
 
 ### Using the SQLite fallback (no server needed)
 
-```
+```ini
+# backend/.env
 DB_DIALECT=sqlite
 # DB_STORAGE=:memory:        # optional; defaults to backend/data/pracoffice.<env>.sqlite
 ```
 
-With no database variables at all the backend **automatically falls back to
-SQLite**, which is what happens during development and in the test suite.
-Production (`NODE_ENV=production`) always requires PostgreSQL and the boot fails
-otherwise.
+With `DB_DIALECT` empty the backend **automatically falls back to SQLite**
+whenever no PostgreSQL variable is present, which is what happens during
+development and in the test suite. Production (`NODE_ENV=production`) always
+requires PostgreSQL and the boot fails otherwise.
+
+`.env` is git-ignored, so keep credentials local; `.env.example` is the
+committed template and never holds real secrets.
 
 > **npm script note:** recent npm versions block package install scripts until
 > they are approved, so `sqlite3`'s native binding may not be compiled on a
@@ -102,9 +123,14 @@ backend/
 | `JWT_SECRET` | dev default | signing key, min 16 chars, **required** in production |
 | `JWT_EXPIRES_IN` | `7d` | token lifetime |
 | `BCRYPT_SALT_ROUNDS` | `10` | password hashing cost |
-| `DB_DIALECT` | auto | `postgres` or `sqlite` |
-| `DATABASE_URL` | – | PostgreSQL connection string (takes precedence) |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL` | – | PostgreSQL without a URL |
+| `DB_DIALECT` | `sqlite` | `postgres` or `sqlite` |
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5432` | PostgreSQL port, integer 1–65535 |
+| `DB_NAME` | `pracoffice` | PostgreSQL database (created on boot if missing) |
+| `DB_USER` | `postgres` | PostgreSQL user |
+| `DB_PASSWORD` | – | PostgreSQL password (keep it in `.env`, never in git) |
+| `DB_SSL` | `false` | required by managed hosts |
+| `DATABASE_URL` | – | connection string that overrides the five variables above |
 | `DB_STORAGE` | `data/pracoffice.<env>.sqlite` | SQLite file, or `:memory:` |
 | `DB_LOGGING` | `false` | log every SQL statement |
 | `DB_SYNC_ALTER` | `false` | run `sync({ alter: true })` on boot (development only) |
@@ -117,6 +143,15 @@ Tables follow the project plan (snake_case columns, `created_at` only).
 
 **users** — `id`, `name`, `email` (unique), `mobile` (unique), `dob` (DATEONLY),
 `username` (unique), `password` (bcrypt hash of the mobile number), `created_at`.
+
+**exam_attempts** — `id`, `user_id`, `total_marks`, `auto_obtained_marks`,
+`auto_total_marks`, `manual_marks`, `answers` (JSONB, the raw typed answers),
+`result` (JSONB, the graded per-task breakdown the results page renders),
+`created_at`. One row per submission; `GET /api/exam/result` returns the newest
+for the signed-in student.
+
+Storing the breakdown as JSON means the results page keeps showing exactly what
+was marked, even after a reload and even if the paper is edited later.
 
 Tables are created automatically on boot (`sequelize.sync()`); `alter` is opt-in.
 
@@ -200,13 +235,68 @@ it. Question marks add up to the part total (15/10/10/10/5) and the parts to 50.
 
 ### `POST /api/exam/submit` 🔒
 
-Body: the finished attempt, for example `{ "parts": { "word": { ... } } }`
-(the current frontend sends `{ "parts": {} }`). An empty body is accepted.
+Marks the attempt and stores it.
 
-`200` → `{ "message": "Exam submitted successfully. Evaluation is pending.", "submittedAt": "...", "totalMarks": 50, "obtainedMarks": 0, "status": "pending", "parts": [ { "id", "key", "name", "totalMarks", "obtainedMarks", "status" } ] }`
+Body: `{ "answers": { "<taskId>": "text the student typed" } }`. An empty body
+(or one with no answers) is accepted and simply scores 0. The older
+`{ "parts": { <partId>: { "answers": {...} } } }` shape is still read, so an
+older client keeps working. Non-string values are ignored.
 
-Automatic per-task marking is not implemented yet, so every part is reported as
-`pending` - the same state the Results page displays.
+`200` →
+
+```json
+{
+  "message": "Exam submitted successfully. …",
+  "submittedAt": "...",
+  "totalMarks": 50,
+  "obtainedMarks": 9,
+  "autoObtainedMarks": 9,
+  "autoTotalMarks": 10,
+  "manualMarks": 40,
+  "percentage": 90,
+  "status": "pending-review",
+  "parts": [{
+    "id": "email", "key": "E", "name": "Email",
+    "totalMarks": 5, "obtainedMarks": 4,
+    "autoObtainedMarks": 4, "autoTotalMarks": 5, "manualMarks": 0,
+    "status": "marked",
+    "questions": [{
+      "id": "e-q1", "label": "Question 1", "title": "…",
+      "totalMarks": 5, "obtainedMarks": 4, "status": "marked",
+      "tasks": [{ "id": "e2-subject", "label": "…", "marks": 1,
+                  "obtainedMarks": 1, "grading": "exact",
+                  "status": "correct", "feedback": "Correct." }]
+    }]
+  }]
+}
+```
+
+#### How marking works
+
+Each task in `services/examPaper.js` declares how it is graded:
+
+| `grading` | Behaviour |
+|---|---|
+| `exact` | The typed answer is compared against `accepted[]`, ignoring case, extra spaces, smart quotes and trailing punctuation. |
+| `keywords` | Every entry in `keywords[]` that appears in the answer earns a proportional share of the task's marks (`4/6` keywords on a 4-mark task → 2.67). |
+| `manual` | Practical work (fonts, alignment, charts, slides) that the API cannot observe. |
+
+Anything not tagged defaults to `manual`. Task `status` is one of `correct`,
+`partial`, `incorrect`, `manual-review` or `not-attempted`.
+
+**Why `manualMarks` is separate.** This is a 50-mark practical and the written
+answers are only 10 of those marks. Scoring the unseen practical work as zero
+would badly misrepresent a student, so those marks are reported as *awaiting an
+examiner* and the result stays `pending-review` until they are entered.
+`autoTotalMarks + manualMarks` always equals the paper total (50).
+
+### `GET /api/exam/result` 🔒
+
+The signed-in student's most recent graded attempt, so the results page still
+shows real marks after a refresh.
+
+`200` → `{ "result": { …same shape as the submit response… } }`
+`404` → no attempt submitted yet (the page then shows a "start the exam" state)
 
 ### `GET /api/health`
 

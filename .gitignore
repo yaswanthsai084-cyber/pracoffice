@@ -1,0 +1,10 @@
+# Local environment files and generated output. Nothing here belongs in git.
+.env
+.env.local
+*.log
+
+# Node
+node_modules/
+
+# Build output
+dist/

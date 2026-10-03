@@ -21,7 +21,10 @@ router.use(authenticate);
 // GET /api/exam - paper: title, duration, parts, questions and marks
 router.get('/', examController.getExam);
 
-// POST /api/exam/submit - accept the attempt and return the result summary
+// POST /api/exam/submit - grade the attempt and return the result breakdown
 router.post('/submit', examController.submitExam);
+
+// GET /api/exam/result - the signed-in student's most recent graded attempt
+router.get('/result', examController.getResult);
 
 module.exports = router;

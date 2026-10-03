@@ -1,0 +1,134 @@
+# PracOffice - full local stack.
+#
+#   docker compose up -d
+#
+# Services:
+#   postgres    - the exam database
+#   onlyoffice  - the ONLYOFFICE Docs document server (Word / Excel / PowerPoint)
+#   backend     - the Express API on http://localhost:3000
+#   frontend    - the Vite dev server on http://localhost:5173
+#
+# For Step 1 you only need `onlyoffice`. It can be started on its own:
+#
+#   docker compose up -d onlyoffice
+#
+# ...or with no compose plugin at all:
+#
+#   docker run -i -t -d --name onlyoffice -p 8080:80 \
+#     --restart=always -e JWT_ENABLED=true \
+#     -e JWT_SECRET=change-me-to-a-long-random-string \
+#     onlyoffice/documentserver
+#
+# WITHOUT Docker the exam still runs via ./dev.sh, and the Word / Excel /
+# PowerPoint parts fall back to the built-in editor. ONLYOFFICE is additive.
+
+name: pracoffice
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-pracoffice}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  onlyoffice:
+    image: onlyoffice/documentserver:latest
+    restart: unless-stopped
+    # 8080 rather than 80 so nothing on the host has to move.
+    ports:
+      - "8080:80"
+    environment:
+      # MUST match OFFICE_JWT_SECRET in backend/.env, or every editor config and
+      # callback is rejected as an invalid token.
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${OFFICE_JWT_SECRET:-change-me-to-a-long-random-string}
+      # The document server has to fetch the source file and post the saved copy
+      # back to the backend, which is inside the compose network.
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+      ALLOW_META_IP_ADDRESS: "false"
+    volumes:
+      - onlyoffice-data:/var/www/onlyoffice/Data
+      - onlyoffice-logs:/var/log/onlyoffice
+      - onlyoffice-cache:/var/lib/onlyoffice
+    healthcheck:
+      # The editor is not usable until /healthcheck answers true, which can take
+      # a minute or two on the very first boot while services initialise.
+      test: ["CMD-SHELL", "curl -fsS http://localhost/healthcheck || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      HOST: 0.0.0.0
+      CORS_ORIGIN: http://localhost:5173
+      DB_DIALECT: postgres
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-pracoffice}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
+      # Switch the real editors on once the document server is healthy.
+      OFFICE_ENABLED: "true"
+      # How the BROWSER loads api.js...
+      OFFICE_PUBLIC_URL: ${OFFICE_PUBLIC_URL:-http://localhost:8080}
+      # ...and how this API asks the document server to force a save.
+      OFFICE_COMMAND_URL: http://onlyoffice
+      # ...but the document server reaches the API by service name: "localhost"
+      # inside the onlyoffice container would be the container itself.
+      OFFICE_INTERNAL_URL: http://backend:3000
+      OFFICE_JWT_ENABLED: "true"
+      OFFICE_JWT_SECRET: ${OFFICE_JWT_SECRET:-change-me-to-a-long-random-string}
+    ports:
+      - "3000:3000"
+    volumes:
+      # Student documents are written here, so keep them across restarts.
+      - office-data:/app/data/office
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  frontend:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    depends_on:
+      - backend
+    environment:
+      # Vite proxies /api to the backend container, not to localhost.
+      API_PROXY_TARGET: http://backend:3000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+volumes:
+  postgres-data:
+  onlyoffice-data:
+  onlyoffice-logs:
+  onlyoffice-cache:
+  office-data:

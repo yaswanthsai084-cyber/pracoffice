@@ -2,6 +2,8 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import Header from "../common/Header"
 import Footer from "../common/Footer"
+import OfficeViewer from "./OfficeViewer"
+import { EDITOR_PANEL_CLASS } from "./editorFrame"
 import { fetchExam, submitExam } from "../../services/examService"
 import "./exam.css"
 
@@ -53,6 +55,9 @@ function Exam() {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  // Typed answers keyed by task id ({ "e2-subject": "Republic Day ..." }).
+  // Kept outside `exam` so typing never re-creates the paper object.
+  const [answers, setAnswers] = useState({})
 
   // Load the exam paper from the backend; fall back to the bundled snapshot
   // when the API is unreachable or the student is not authenticated yet.
@@ -93,6 +98,12 @@ function Exam() {
   const activeQuestion = activeQuestions[safeQuestionIndex] || null
   const activeLink = activePart?.link
 
+  // Only the tasks the backend can mark get an input; formatting/layout work
+  // is graded by an examiner, so it is shown as a checklist without a box.
+  const autoTasks = (activeQuestion?.tasks || []).filter(
+    (task) => task.grading && task.grading !== "manual"
+  )
+
   // Flat list of every question in the paper (A-Q1, A-Q2, B-Q1, ...) used by
   // the Previous / Next buttons so they walk question by question.
   const steps = exam
@@ -126,6 +137,11 @@ function Exam() {
     setActiveQuestionIndex(step.questionIndex)
   }
 
+  /** Records what the student typed for a task. */
+  const setAnswer = (taskId, value) => {
+    setAnswers((current) => ({ ...current, [taskId]: value }))
+  }
+
   /** Submits the exam and moves to the results page. */
   const handleSubmit = async () => {
     if (submitting) return
@@ -133,7 +149,12 @@ function Exam() {
     setSubmitting(true)
 
     try {
-      await submitExam({ parts: {} })
+      // Empty strings are dropped so an untouched box is never graded as an
+      // attempt, and the backend still receives every answered task.
+      const payload = Object.fromEntries(
+        Object.entries(answers).filter(([, value]) => value.trim() !== "")
+      )
+      await submitExam(payload)
       navigate("/results")
     } catch (error) {
       window.alert(error.message || "Could not submit the exam right now.")
@@ -316,10 +337,50 @@ function Exam() {
               ))}
             </div>
 
+            {/* Typed answers for the tasks the backend can mark automatically.
+                Tasks without an input are practical work graded by an examiner. */}
+            <div className="space-y-4 border-t border-border p-5">
+
+              {autoTasks.length > 0 && autoTasks.map((task) => (
+                <div key={task.id}>
+
+                  <label
+                    htmlFor={`answer-${task.id}`}
+                    className="flex items-start justify-between gap-3 text-sm font-semibold text-text-primary"
+                  >
+                    <span>{task.label}</span>
+                    <span className="shrink-0 rounded-full bg-brand-light px-3 py-1 text-xs font-bold text-brand">
+                      {task.marks} {task.marks === 1 ? "mark" : "marks"}
+                    </span>
+                  </label>
+
+                  <textarea
+                    id={`answer-${task.id}`}
+                    rows={task.id === "a10-letter-content" || task.id === "e3-body" ? 5 : 2}
+                    value={answers[task.id] || ""}
+                    onChange={(event) => setAnswer(task.id, event.target.value)}
+                    placeholder={task.placeholder || "Type your answer here…"}
+                    className="mt-2 w-full resize-y rounded-xl border border-border bg-page px-4 py-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-brand focus:ring-4 focus:ring-brand/10"
+                  />
+
+                </div>
+              ))}
+
+              {(activeQuestion.tasks || []).length > autoTasks.length && (
+                <p className="text-xs leading-5 text-text-muted">
+                  The remaining{" "}
+                  {(activeQuestion.tasks || []).length - autoTasks.length} item(s) in this
+                  question are practical tasks (formatting, charts, slides) marked by
+                  an examiner.
+                </p>
+              )}
+
+            </div>
+
           </div>
 
-          {/* Simulated software section, below the question */}
-          <div className="mt-6 flex min-h-[560px] flex-col overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-border">
+          {/* The real MS Office application for this part, shown in the page */}
+          <div className={`mt-6 ${EDITOR_PANEL_CLASS}`}>
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-page px-4 py-3">
 
@@ -330,7 +391,8 @@ function Exam() {
               </div>
 
               <p className="text-xs font-semibold text-text-secondary">
-                Simulated {activePart.name} application
+                {activePart.name}
+                {activeLink ? ` · ${activeLink.label}` : ""}
               </p>
 
               <span className="text-xs text-text-muted">
@@ -339,37 +401,11 @@ function Exam() {
 
             </div>
 
-            <div className="flex flex-1 items-center justify-center p-8">
-
-              <div className="max-w-md text-center">
-
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-light text-xl font-bold text-brand">
-                  {activePart.name.charAt(0)}
-                </div>
-
-                <h3 className="mt-5 text-xl font-bold text-text-primary">
-                  {activePart.name} workspace
-                </h3>
-
-                {activeLink ? (
-                  <a
-                    href={activeLink.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition hover:-translate-y-0.5 hover:bg-brand-dark"
-                  >
-                    {activeLink.label}
-                    <span aria-hidden="true">↗</span>
-                  </a>
-                ) : (
-                  <p className="mt-5 text-sm font-medium text-text-secondary">
-                    Continue completing this question in the workspace provided.
-                  </p>
-                )}
-
-              </div>
-
-            </div>
+            <OfficeViewer
+              part={activePart}
+              partLetter={partLetter(activePart, activeIndex)}
+              questionLabel={activeQuestion.label}
+            />
 
           </div>
 
